@@ -72,7 +72,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               </span>
             </div>
             <p className="text-[11px] text-amber-200/90 font-medium tracking-wide">
-              CÔNG AN PHƯỜNG / XÃ • THEO DÕI CHỈ TIÊU NGHIỆP VỤ
+              CÔNG AN PHƯỜNG / XÃ • THEO DÕI CHỈ TIÊU CÔNG TÁC
             </p>
           </div>
         </div>

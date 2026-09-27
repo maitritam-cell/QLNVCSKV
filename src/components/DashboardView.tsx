@@ -71,7 +71,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </span>
             </div>
             <h2 className="text-lg sm:text-xl font-extrabold tracking-tight">
-              TIẾN ĐỘ THỰC HIỆN 4 CHỈ TIÊU CÔNG TÁC NGHIỆP VỤ
+              TIẾN ĐỘ THỰC HIỆN 4 CHỈ TIÊU CÔNG TÁC
             </h2>
             <p className="text-xs text-slate-300 mt-0.5">
               Cập nhật tức thời theo kết quả cán bộ chiến sĩ hoàn thành trên địa bàn

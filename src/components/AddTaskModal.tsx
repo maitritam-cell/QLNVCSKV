@@ -130,7 +130,7 @@ export const AddTaskModal: React.FC<AddTaskModalProps> = ({
           {/* Select Task Type */}
           <div>
             <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-              Loại nhiệm vụ nghiệp vụ:
+              Loại chỉ tiêu nhiệm vụ:
             </label>
             <select
               id="select-modal-task"

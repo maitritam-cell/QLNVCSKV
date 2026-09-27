@@ -126,7 +126,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           {/* Unit info */}
           <div className="space-y-2.5">
             <h4 className="font-bold text-slate-800 uppercase tracking-wider text-[11px]">
-              1. Thông tin đơn vị nghiệp vụ
+              1. Thông tin đơn vị công tác
             </h4>
             <div>
               <label className="font-bold text-slate-600 block mb-1">Tên đơn vị công an (In trên tiêu đề & Báo cáo):</label>
@@ -140,7 +140,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               />
             </div>
             <div>
-              <label className="font-bold text-slate-600 block mb-1">Tên tổ công tác / Đội nghiệp vụ:</label>
+              <label className="font-bold text-slate-600 block mb-1">Tên tổ công tác / Đội công tác:</label>
               <input
                 type="text"
                 value={subUnitName}

@@ -23,7 +23,7 @@ export const TASK_LIST: TaskInfo[] = [
     id: 'matuy',
     title: 'Test Đối Tượng Ma Túy',
     shortName: 'Test Ma Túy',
-    badge: 'Nghiệp vụ CSĐT',
+    badge: 'Chỉ tiêu CSĐT',
     icon: 'TestTube',
     description: 'Lập danh sách, xét nghiệm test nhanh chất ma túy định kỳ đối với các đối tượng thuộc diện quản lý',
     unit: 'Đối tượng',

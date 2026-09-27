@@ -1,6 +1,6 @@
 {
   "name": "Quản Lý Nhiệm Vụ Công Tác",
-  "description": "Cổng quản lý, theo dõi và cập nhật tiến độ các nhiệm vụ công tác nghiệp vụ Công an: Hộ không chủ hộ (HKCCH), Test ma túy, Điều chỉnh Tổ dân phố (ĐCTTP), và Làm sạch dữ liệu đất đai.",
+  "description": "Cổng quản lý, theo dõi và cập nhật tiến độ các nhiệm vụ công tác Công an: Hộ không chủ hộ (HKCCH), Test ma túy, Điều chỉnh Tổ dân phố (ĐCTTP), và Làm sạch dữ liệu đất đai.",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"

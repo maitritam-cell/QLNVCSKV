@@ -29,7 +29,8 @@ import {
   getCurrentUser,
   setCurrentUser,
   logoutUser,
-  syncStaffToAccounts
+  syncStaffToAccounts,
+  deleteUserAccount
 } from './data/storage';
 import { Navbar } from './components/Navbar';
 import { TaskUpdateView } from './components/TaskUpdateView';
@@ -43,9 +44,8 @@ import { AccountManagementModal } from './components/AccountManagementModal';
 import { ShieldCheck, Check } from 'lucide-react';
 
 export function App() {
-  // Authentication & session state
+  // Authentication & session state (Strict Login - No trial/guest mode)
   const [currentUser, setCurrentUserState] = useState<UserAccount | null>(() => getCurrentUser());
-  const [isGuest, setIsGuest] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
@@ -103,7 +103,6 @@ export function App() {
   const handleLoginSuccess = (user: UserAccount) => {
     setCurrentUserState(user);
     setIsLoginModalOpen(false);
-    setIsGuest(false);
     if (user.staffId) {
       setSelectedStaffId(user.staffId);
     } else {
@@ -115,7 +114,6 @@ export function App() {
   const handleLogout = () => {
     logoutUser();
     setCurrentUserState(null);
-    setIsGuest(false);
     setIsLoginModalOpen(false);
     showToast('Đã đăng xuất khỏi hệ thống');
   };
@@ -180,7 +178,9 @@ export function App() {
     const updated = staffList.filter((s) => s.id !== staffId);
     setStaffList(updated);
     saveStaffList(updated);
-    showToast('Đã xóa cán bộ khỏi danh sách!');
+    deleteUserAccount(`user_${staffId}`);
+    deleteUserAccount(staffId);
+    showToast('Đã xóa cán bộ và tài khoản liên kết khỏi hệ thống!');
   };
 
   // Reassign tasks from one officer to another
@@ -438,15 +438,11 @@ export function App() {
     setCurrentTab('update');
   };
 
-  // If user is not authenticated and not in guest mode, show the official Police Login Portal
-  if (!currentUser && !isGuest) {
+  // If user is not authenticated, show the official Police Login Portal (Strict login, no guest mode)
+  if (!currentUser) {
     return (
       <LoginView
         onLoginSuccess={handleLoginSuccess}
-        onContinueAsGuest={() => {
-          setIsGuest(true);
-          showToast('Đang xem ở chế độ Khách trải nghiệm');
-        }}
       />
     );
   }
@@ -460,20 +456,6 @@ export function App() {
             <Check className="w-3.5 h-3.5" />
           </div>
           <span>{toastMessage}</span>
-        </div>
-      )}
-
-      {/* Guest Mode Notice Bar */}
-      {isGuest && !currentUser && (
-        <div className="bg-amber-500 text-slate-950 px-4 py-1.5 text-xs font-bold flex items-center justify-between shadow-xs">
-          <span>⚠️ Chế độ Khách trải nghiệm (Chưa đăng nhập tài khoản Cán bộ / Chỉ huy)</span>
-          <button
-            type="button"
-            onClick={() => setIsLoginModalOpen(true)}
-            className="px-2.5 py-0.5 bg-slate-950 text-white hover:bg-slate-800 rounded-lg text-[11px] font-black transition cursor-pointer"
-          >
-            Đăng Nhập Ngay
-          </button>
         </div>
       )}
 
@@ -592,10 +574,6 @@ export function App() {
                 handleLoginSuccess(user);
                 setIsLoginModalOpen(false);
               }}
-              onContinueAsGuest={() => {
-                setIsLoginModalOpen(false);
-                setIsGuest(true);
-              }}
             />
           </div>
         </div>
@@ -606,7 +584,7 @@ export function App() {
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
           <div className="flex items-center gap-1.5 font-medium text-slate-700">
             <ShieldCheck className="w-4 h-4 text-red-700" />
-            <span>Hệ Thống Quản Lý Nhiệm Vụ Công Tác Nghiệp Vụ Công An</span>
+            <span>Hệ Thống Quản Lý Nhiệm Vụ Công Tác Công An</span>
           </div>
           <div className="text-[11px] text-slate-400">
             HKCCH • Test Ma Túy • ĐCTTP • Làm Sạch Dữ Liệu Đất Đai (Lần 4)

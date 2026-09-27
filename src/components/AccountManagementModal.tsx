@@ -325,20 +325,35 @@ export const AccountManagementModal: React.FC<AccountManagementModalProps> = ({
               </div>
             </div>
 
-            <div className="flex justify-end gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setIsAddOpen(false)}
-                className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg font-bold"
-              >
-                Hủy
-              </button>
-              <button
-                type="submit"
-                className="px-4 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-lg shadow"
-              >
-                {editingAccount ? 'Lưu Thay Đổi' : 'Tạo Tài Khoản'}
-              </button>
+            <div className="flex justify-between items-center pt-2">
+              {editingAccount ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleDelete(editingAccount);
+                    setIsAddOpen(false);
+                  }}
+                  className="px-3 py-1.5 bg-red-950/80 hover:bg-red-900 text-red-300 border border-red-800 rounded-lg font-bold flex items-center gap-1.5 transition text-xs"
+                >
+                  <Trash2 className="w-3.5 h-3.5 text-red-400" />
+                  <span>Xóa Tài Khoản Này</span>
+                </button>
+              ) : <div />}
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAddOpen(false)}
+                  className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg font-bold"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-lg shadow"
+                >
+                  {editingAccount ? 'Lưu Thay Đổi' : 'Tạo Tài Khoản'}
+                </button>
+              </div>
             </div>
           </form>
         )}
@@ -471,6 +486,14 @@ export const AccountManagementModal: React.FC<AccountManagementModalProps> = ({
                       className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300"
                     >
                       <Edit2 className="w-3 h-3" />
+                    </button>
+                    <button
+                      type="button"
+                      title="Xóa tài khoản này"
+                      onClick={() => handleDelete(acc)}
+                      className="p-1 rounded bg-red-950/80 hover:bg-red-900 text-red-400 hover:text-red-200 transition"
+                    >
+                      <Trash2 className="w-3 h-3" />
                     </button>
                   </div>
                 </div>

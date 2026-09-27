@@ -20,12 +20,10 @@ import {
 
 interface LoginViewProps {
   onLoginSuccess: (user: UserAccount) => void;
-  onContinueAsGuest?: () => void;
 }
 
 export const LoginView: React.FC<LoginViewProps> = ({
-  onLoginSuccess,
-  onContinueAsGuest
+  onLoginSuccess
 }) => {
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
@@ -82,7 +80,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
               CÔNG AN PHƯỜNG / XÃ • ĐỀ ÁN 06/BCA
             </div>
             <div className="text-[10px] text-slate-400">
-              Hệ thống xác thực & kiểm soát truy cập nghiệp vụ
+              Hệ thống xác thực & kiểm soát truy cập
             </div>
           </div>
         </div>
@@ -109,7 +107,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
               ĐĂNG NHẬP HỆ THỐNG
             </h2>
             <p className="text-xs text-amber-200/90 font-medium mt-1">
-              Cổng Quản Lý Nhiệm Vụ Công Tác Nghiệp Vụ
+              Cổng Quản Lý Nhiệm Vụ Công Tác
             </p>
           </div>
 
@@ -241,7 +239,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                   className="text-xs text-amber-300 hover:text-amber-200 flex items-center justify-center gap-1 mx-auto underline-offset-4 hover:underline"
                 >
                   <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Hoặc bấm vào đây để chọn nhanh tài khoản thử nghiệm</span>
+                  <span>Hoặc bấm vào đây để chọn nhanh tài khoản (Đăng nhập 1 chạm)</span>
                 </button>
               </div>
             </form>
@@ -337,28 +335,13 @@ export const LoginView: React.FC<LoginViewProps> = ({
             </div>
           )}
 
-          {/* Continue as Guest Footer */}
-          {onContinueAsGuest && (
-            <div className="px-6 py-3 bg-slate-950/80 border-t border-slate-800 flex items-center justify-between text-xs">
-              <span className="text-slate-400">Chế độ trải nghiệm:</span>
-              <button
-                type="button"
-                id="btn-continue-as-guest"
-                onClick={onContinueAsGuest}
-                className="text-amber-400 hover:text-amber-300 font-semibold flex items-center gap-1 hover:underline"
-              >
-                <span>Xem nhanh với tư cách Khách</span>
-                <ChevronRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          )}
         </div>
       </div>
 
       {/* Security Disclaimer Footer */}
       <div className="max-w-4xl w-full mx-auto text-center py-2 text-[11px] text-slate-400 flex flex-col sm:flex-row items-center justify-between gap-2 border-t border-white/5">
         <div>
-          Cổng Quản Lý Nhiệm Vụ Nghiệp Vụ CAND • Bảo mật cơ sở dữ liệu nội bộ
+          Cổng Quản Lý Nhiệm Vụ CAND • Bảo mật cơ sở dữ liệu nội bộ
         </div>
         <div className="text-slate-500">
           Phiên bản 1.0 • Hỗ trợ Đề án 06 Chính phủ

@@ -28,7 +28,8 @@ export const STORAGE_KEYS = {
   DATDAI: 'nhiemvu_datdai_list_v1',
   CONFIG: 'nhiemvu_app_config_v1',
   ACCOUNTS: 'nhiemvu_user_accounts_v1',
-  CURRENT_USER: 'nhiemvu_current_user_v1'
+  CURRENT_USER: 'nhiemvu_current_user_v1',
+  DELETED_ACCOUNTS: 'nhiemvu_deleted_accounts_v1'
 };
 
 export const TASK_CONFIG: Record<
@@ -486,14 +487,41 @@ export function changeUserPassword(userId: string, newPass: string): boolean {
   }
 }
 
+export function getDeletedAccountIds(): string[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.DELETED_ACCOUNTS);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveDeletedAccountId(id: string): void {
+  try {
+    const list = getDeletedAccountIds();
+    if (!list.includes(id)) {
+      list.push(id);
+      localStorage.setItem(STORAGE_KEYS.DELETED_ACCOUNTS, JSON.stringify(list));
+    }
+  } catch {
+    // Ignore
+  }
+}
+
 export function syncStaffToAccounts(staffList: Staff[]): void {
   const accounts = getUserAccounts();
+  const deletedIds = new Set(getDeletedAccountIds());
   const existingStaffIds = new Set(accounts.filter((a) => a.staffId).map((a) => a.staffId));
 
   let modified = false;
   const newAccounts = [...accounts];
 
   staffList.forEach((staff) => {
+    // If user previously deleted this account, do not auto-recreate
+    if (deletedIds.has(`user_${staff.id}`) || deletedIds.has(staff.id)) {
+      return;
+    }
+
     if (!existingStaffIds.has(staff.id)) {
       modified = true;
       newAccounts.push({
@@ -561,8 +589,26 @@ export function updateUserAccount(account: UserAccount): boolean {
 export function deleteUserAccount(userId: string): boolean {
   try {
     const accounts = getUserAccounts();
+    const target = accounts.find((a) => a.id === userId);
     const filtered = accounts.filter((a) => a.id !== userId);
     saveUserAccounts(filtered);
+
+    // Save to deleted list so syncStaffToAccounts won't resurrect it
+    saveDeletedAccountId(userId);
+    if (target?.staffId) {
+      saveDeletedAccountId(target.staffId);
+      saveDeletedAccountId(`user_${target.staffId}`);
+    }
+    if (target?.username) {
+      saveDeletedAccountId(target.username);
+    }
+
+    // If currently logged-in user is being deleted, log out
+    const curr = getCurrentUser();
+    if (curr && curr.id === userId) {
+      logoutUser();
+    }
+
     return true;
   } catch {
     return false;
@@ -580,6 +626,7 @@ export function resetAllDataToDefault(): void {
   localStorage.setItem(STORAGE_KEYS.DCTTP, JSON.stringify(INITIAL_DCTTP));
   localStorage.setItem(STORAGE_KEYS.DATDAI, JSON.stringify(INITIAL_DATDAI));
   localStorage.setItem(STORAGE_KEYS.ACCOUNTS, JSON.stringify(INITIAL_USER_ACCOUNTS));
+  localStorage.removeItem(STORAGE_KEYS.DELETED_ACCOUNTS);
   localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
 }
 
