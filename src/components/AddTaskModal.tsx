@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { X, PlusCircle } from 'lucide-react';
+import { X, PlusCircle, AlertCircle } from 'lucide-react';
 import { TaskType, Staff } from '../types';
-import { TASK_CONFIG } from '../data/storage';
+import { TASK_CONFIG, getTaskCategories } from '../data/storage';
 
 interface AddTaskModalProps {
   isOpen: boolean;
@@ -23,23 +23,27 @@ export const AddTaskModal: React.FC<AddTaskModalProps> = ({
   const [hoTen, setHoTen] = useState('');
   const [toDanPho, setToDanPho] = useState('');
   const [info1, setInfo1] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
   // Specific to Dat dai / Matuy
   const [cmnd, setCmnd] = useState('');
   const [namSinh, setNamSinh] = useState('');
   const [diaChi, setDiaChi] = useState('');
 
+  const categories = getTaskCategories();
+
   if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
 
     const selectedStaff = staffList.find((s) => s.id === selectedStaffId);
     const staffName = selectedStaff ? selectedStaff.name : 'Cán bộ phụ trách';
 
     if (selectedTask === 'hkcch') {
       if (!hoTen.trim()) {
-        alert('Vui lòng nhập họ và tên chủ hộ cũ');
+        setError('Vui lòng nhập họ và tên chủ hộ');
         return;
       }
       onAddTask('hkcch', {
@@ -53,7 +57,7 @@ export const AddTaskModal: React.FC<AddTaskModalProps> = ({
       });
     } else if (selectedTask === 'matuy') {
       if (!hoTen.trim()) {
-        alert('Vui lòng nhập họ và tên đối tượng');
+        setError('Vui lòng nhập họ và tên đối tượng');
         return;
       }
       onAddTask('matuy', {
@@ -68,7 +72,7 @@ export const AddTaskModal: React.FC<AddTaskModalProps> = ({
       });
     } else if (selectedTask === 'dcttp') {
       if (!hoTen.trim()) {
-        alert('Vui lòng nhập tên Tổ dân phố / Khu vực');
+        setError('Vui lòng nhập tên Tổ dân phố / Khu vực');
         return;
       }
       const targetCount = parseInt(info1, 10) || 50;
@@ -82,7 +86,7 @@ export const AddTaskModal: React.FC<AddTaskModalProps> = ({
       });
     } else if (selectedTask === 'datdai') {
       if (!hoTen.trim()) {
-        alert('Vui lòng nhập họ và tên chủ hộ');
+        setError('Vui lòng nhập họ và tên chủ hộ');
         return;
       }
       onAddTask('datdai', {
@@ -94,6 +98,21 @@ export const AddTaskModal: React.FC<AddTaskModalProps> = ({
         staffId: selectedStaffId,
         staffName,
         isDone: false,
+      });
+    } else {
+      // Custom task category
+      if (!hoTen.trim()) {
+        setError('Vui lòng nhập họ tên hoặc tiêu đề mục tiêu');
+        return;
+      }
+      onAddTask(selectedTask, {
+        hoTen: hoTen.trim(),
+        info1: info1.trim() || '',
+        toDanPho: toDanPho.trim() || 'Tổ dân phố 1',
+        staffId: selectedStaffId,
+        staffName,
+        isDone: false,
+        note: ''
       });
     }
 
@@ -125,6 +144,14 @@ export const AddTaskModal: React.FC<AddTaskModalProps> = ({
           </button>
         </div>
 
+        {/* Error message */}
+        {error && (
+          <div className="mx-5 mt-4 p-2.5 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
+
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-5 space-y-4 max-h-[80vh] overflow-y-auto">
           {/* Select Task Type */}
@@ -138,9 +165,9 @@ export const AddTaskModal: React.FC<AddTaskModalProps> = ({
               onChange={(e) => setSelectedTask(e.target.value as TaskType)}
               className="w-full p-2.5 text-xs font-semibold bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-red-600 focus:outline-hidden"
             >
-              {(['hkcch', 'matuy', 'dcttp', 'datdai'] as TaskType[]).map((tKey) => (
-                <option key={tKey} value={tKey}>
-                  {TASK_CONFIG[tKey].title}
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.title} ({cat.shortTitle})
                 </option>
               ))}
             </select>

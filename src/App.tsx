@@ -9,7 +9,8 @@ import {
   TaskStats,
   StaffTaskStats,
   AllDashboardStats,
-  UserAccount
+  UserAccount,
+  GenericTaskRecord
 } from './types';
 import {
   getStaffList,
@@ -30,7 +31,10 @@ import {
   setCurrentUser,
   logoutUser,
   syncStaffToAccounts,
-  deleteUserAccount
+  deleteUserAccount,
+  getGenericTasksList,
+  saveGenericTasksList,
+  getTaskCategories
 } from './data/storage';
 import { Navbar } from './components/Navbar';
 import { TaskUpdateView } from './components/TaskUpdateView';
@@ -41,7 +45,8 @@ import { DataManagementModal } from './components/DataManagementModal';
 import { LoginView } from './components/LoginView';
 import { ChangePasswordModal } from './components/ChangePasswordModal';
 import { AccountManagementModal } from './components/AccountManagementModal';
-import { ShieldCheck, Check } from 'lucide-react';
+import { ManageTaskCategoriesModal } from './components/ManageTaskCategoriesModal';
+import { ShieldCheck, Check, Trash2, AlertTriangle } from 'lucide-react';
 
 export function App() {
   // Authentication & session state (Strict Login - No trial/guest mode)
@@ -49,6 +54,7 @@ export function App() {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
+  const [isManageCategoriesOpen, setIsManageCategoriesOpen] = useState(false);
 
   const [currentTab, setCurrentTab] = useState<'update' | 'dashboard' | 'staff'>('update');
   const [currentTask, setCurrentTask] = useState<TaskType>('hkcch');
@@ -57,13 +63,20 @@ export function App() {
     return user?.staffId || '';
   });
 
-
   // Data lists
   const [staffList, setStaffList] = useState<Staff[]>([]);
   const [hkcchList, setHkcchList] = useState<HKCCHRecord[]>([]);
   const [matuyList, setMatuyList] = useState<MaTuyRecord[]>([]);
   const [dcttpList, setDcttpList] = useState<DCTTPRecord[]>([]);
   const [datdaiList, setDatdaiList] = useState<DatDaiRecord[]>([]);
+  const [genericTasksList, setGenericTasksList] = useState<GenericTaskRecord[]>([]);
+
+  // In-app Delete Confirmation Modal
+  const [recordToDelete, setRecordToDelete] = useState<{
+    taskType: TaskType;
+    stt: number;
+    title: string;
+  } | null>(null);
 
   // Modals
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -90,6 +103,7 @@ export function App() {
     setMatuyList(getMatuyList());
     setDcttpList(getDcttpList());
     setDatdaiList(getDatdaiList());
+    setGenericTasksList(getGenericTasksList());
     setTimeout(() => {
       setIsRefreshing(false);
     }, 300);
@@ -327,10 +341,16 @@ export function App() {
     showToast('Đã lưu thông tin làm sạch dữ liệu đất đai ✓');
   };
 
-  // Delete a record
-  const handleDeleteRecord = (taskType: TaskType, stt: number) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa bản ghi này?')) return;
+  // In-app Delete a record (No window.confirm to avoid iframe issues)
+  const handleDeleteRecord = (taskType: TaskType, stt: number, recordTitle?: string) => {
+    setRecordToDelete({
+      taskType,
+      stt,
+      title: recordTitle || `Chỉ tiêu #${stt}`
+    });
+  };
 
+  const executeDeleteRecord = (taskType: TaskType, stt: number) => {
     if (taskType === 'hkcch') {
       const updated = hkcchList.filter((item) => item.stt !== stt);
       setHkcchList(updated);
@@ -347,8 +367,32 @@ export function App() {
       const updated = datdaiList.filter((item) => item.stt !== stt);
       setDatdaiList(updated);
       saveDatdaiList(updated);
+    } else {
+      const updated = genericTasksList.filter(
+        (item) => !(item.taskType === taskType && item.stt === stt)
+      );
+      setGenericTasksList(updated);
+      saveGenericTasksList(updated);
     }
-    showToast('Đã xóa bản ghi thành công!');
+    showToast('Đã xóa chỉ tiêu thành công ✓');
+  };
+
+  const handleUpdateGenericTask = (stt: number, isDone: boolean, note?: string) => {
+    const timestamp = new Date().toISOString().replace('T', ' ').slice(0, 16);
+    const updated = genericTasksList.map((item) => {
+      if (item.stt === stt && item.taskType === currentTask) {
+        return {
+          ...item,
+          isDone,
+          note: note !== undefined ? note : item.note,
+          updatedAt: timestamp
+        };
+      }
+      return item;
+    });
+    setGenericTasksList(updated);
+    saveGenericTasksList(updated);
+    showToast(isDone ? 'Đã đánh dấu hoàn thành chỉ tiêu ✓' : 'Đã chuyển về chưa hoàn thành');
   };
 
   // Add a new task record
@@ -424,11 +468,30 @@ export function App() {
       const updated = [newRec, ...datdaiList];
       setDatdaiList(updated);
       saveDatdaiList(updated);
+    } else {
+      // Custom task category
+      const nextStt = genericTasksList.length > 0 ? Math.max(...genericTasksList.map((r) => r.stt)) + 1 : 1;
+      const newRec: GenericTaskRecord = {
+        stt: nextStt,
+        taskType,
+        hoTen: recordData.hoTen,
+        soHoSo: recordData.info1 || `CT-${Date.now().toString().slice(-4)}`,
+        toDanPho: recordData.toDanPho || 'Tổ dân phố 1',
+        canBoId: recordData.staffId,
+        canBoName: recordData.staffName,
+        isDone: false,
+        note: recordData.note || '',
+        info1: recordData.info1,
+        updatedAt: timestamp
+      };
+      const updated = [newRec, ...genericTasksList];
+      setGenericTasksList(updated);
+      saveGenericTasksList(updated);
     }
 
     setCurrentTask(taskType);
     setSelectedStaffId(recordData.staffId || '');
-    showToast(`Đã giao chỉ tiêu ${TASK_CONFIG[taskType].shortTitle} cho cán bộ thành công ✓`);
+    showToast(`Đã thêm chỉ tiêu ${TASK_CONFIG[taskType]?.shortTitle || taskType} thành công ✓`);
   };
 
   // Drilldown from Dashboard into specific task and officer
@@ -487,13 +550,16 @@ export function App() {
             matuyList={matuyList}
             dcttpList={dcttpList}
             datdaiList={datdaiList}
+            genericTasksList={genericTasksList}
             currentUser={currentUser}
             onUpdateHkcch={handleUpdateHkcch}
             onUpdateMatuy={handleUpdateMatuy}
             onUpdateDcttp={handleUpdateDcttp}
             onUpdateDatdai={handleUpdateDatdai}
+            onUpdateGenericTask={handleUpdateGenericTask}
             onDeleteRecord={handleDeleteRecord}
             onOpenAddModal={() => setIsAddModalOpen(true)}
+            onOpenManageCategories={() => setIsManageCategoriesOpen(true)}
           />
         )}
 
@@ -541,6 +607,13 @@ export function App() {
         onDataChanged={loadAllData}
       />
 
+      {/* Task Categories Management Modal */}
+      <ManageTaskCategoriesModal
+        isOpen={isManageCategoriesOpen}
+        onClose={() => setIsManageCategoriesOpen(false)}
+        onCategoriesUpdated={loadAllData}
+      />
+
       {currentUser && (
         <ChangePasswordModal
           isOpen={isChangePasswordOpen}
@@ -557,6 +630,44 @@ export function App() {
         onAccountsUpdated={loadAllData}
         currentUserId={currentUser?.id}
       />
+
+      {/* In-App Delete Task Confirmation Modal */}
+      {recordToDelete && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="bg-slate-900 border border-slate-700 rounded-3xl max-w-sm w-full p-5 text-slate-100 shadow-2xl text-center">
+            <div className="w-12 h-12 rounded-2xl bg-red-950/80 border border-red-600/50 flex items-center justify-center text-red-400 mx-auto mb-3 shadow-inner">
+              <Trash2 className="w-6 h-6" />
+            </div>
+            <h3 className="font-black text-base text-white">Xác Nhận Xóa Chỉ Tiêu</h3>
+            <p className="text-xs text-slate-300 mt-2 leading-relaxed">
+              Bạn có chắc chắn muốn xóa bản ghi chỉ tiêu{' '}
+              <b className="text-white">"{recordToDelete.title}"</b> (STT #{recordToDelete.stt})?
+            </p>
+            <p className="text-[11px] text-red-400/80 mt-1">
+              Dữ liệu sau khi xóa sẽ được cập nhật trừ đi khỏi chỉ tiêu của cán bộ.
+            </p>
+            <div className="grid grid-cols-2 gap-2 mt-5">
+              <button
+                type="button"
+                onClick={() => setRecordToDelete(null)}
+                className="py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  executeDeleteRecord(recordToDelete.taskType, recordToDelete.stt);
+                  setRecordToDelete(null);
+                }}
+                className="py-2 px-3 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-black shadow-lg shadow-red-900/50 transition active:scale-95"
+              >
+                Xóa Chỉ Tiêu
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Switch Account / Login Overlay Modal */}
       {isLoginModalOpen && (

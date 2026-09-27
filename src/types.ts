@@ -1,4 +1,14 @@
-export type TaskType = 'hkcch' | 'matuy' | 'dcttp' | 'datdai';
+export type TaskType = 'hkcch' | 'matuy' | 'dcttp' | 'datdai' | string;
+
+export interface TaskCategoryConfig {
+  id: string;
+  title: string;
+  shortTitle: string;
+  unit: string;
+  badge: string;
+  color: string;
+  isCustom?: boolean;
+}
 
 export interface TaskInfo {
   id: TaskType;
@@ -78,6 +88,21 @@ export interface DatDaiRecord {
   updatedAt?: string;
 }
 
+export interface GenericTaskRecord {
+  stt: number;
+  taskType: string;
+  hoTen: string;
+  soHoSo?: string;
+  toDanPho: string;
+  canBoId: string;
+  canBoName?: string;
+  isDone: boolean;
+  info1?: string;
+  info2?: string;
+  updatedAt?: string;
+  note?: string;
+}
+
 export interface TaskStats {
   total: number;
   done: number;
@@ -99,6 +124,7 @@ export interface AllDashboardStats {
   matuy: TaskStats;
   dcttp: TaskStats;
   datdai: TaskStats;
+  [key: string]: TaskStats;
 }
 
 export interface AppConfig {

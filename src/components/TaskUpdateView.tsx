@@ -7,13 +7,15 @@ import {
   DCTTPRecord,
   DatDaiRecord,
   TaskStats,
-  UserAccount
+  UserAccount,
+  GenericTaskRecord
 } from '../types';
-import { TASK_CONFIG } from '../data/storage';
+import { TASK_CONFIG, getTaskCategories } from '../data/storage';
 import { HkcchCard } from './HkcchCard';
 import { MatuyCard } from './MatuyCard';
 import { DcttpCard } from './DcttpCard';
 import { DatdaiCard } from './DatdaiCard';
+import { GenericTaskCard } from './GenericTaskCard';
 import {
   Search,
   User,
@@ -26,7 +28,9 @@ import {
   Clock,
   X,
   ShieldCheck,
-  UserCheck
+  UserCheck,
+  Sliders,
+  Bookmark
 } from 'lucide-react';
 
 interface TaskUpdateViewProps {
@@ -40,6 +44,7 @@ interface TaskUpdateViewProps {
   matuyList: MaTuyRecord[];
   dcttpList: DCTTPRecord[];
   datdaiList: DatDaiRecord[];
+  genericTasksList?: GenericTaskRecord[];
   currentUser?: UserAccount | null;
   onUpdateHkcch: (stt: number, isDone: boolean, note?: string) => void;
   onUpdateMatuy: (
@@ -50,8 +55,10 @@ interface TaskUpdateViewProps {
   ) => void;
   onUpdateDcttp: (stt: number, count: number) => void;
   onUpdateDatdai: (stt: number, data: Partial<DatDaiRecord>) => void;
-  onDeleteRecord: (taskType: TaskType, stt: number) => void;
+  onUpdateGenericTask?: (stt: number, isDone: boolean, note?: string) => void;
+  onDeleteRecord: (taskType: TaskType, stt: number, recordTitle?: string) => void;
   onOpenAddModal: () => void;
+  onOpenManageCategories?: () => void;
 }
 
 export const TaskUpdateView: React.FC<TaskUpdateViewProps> = ({
@@ -65,17 +72,21 @@ export const TaskUpdateView: React.FC<TaskUpdateViewProps> = ({
   matuyList,
   dcttpList,
   datdaiList,
+  genericTasksList = [],
   currentUser,
   onUpdateHkcch,
   onUpdateMatuy,
   onUpdateDcttp,
   onUpdateDatdai,
+  onUpdateGenericTask,
   onDeleteRecord,
-  onOpenAddModal
+  onOpenAddModal,
+  onOpenManageCategories
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'done' | 'pending'>('all');
 
+  const taskCategories = getTaskCategories();
   const taskConfig = TASK_CONFIG[currentTask];
 
   const getTaskIcon = (taskKey: TaskType) => {
@@ -88,6 +99,8 @@ export const TaskUpdateView: React.FC<TaskUpdateViewProps> = ({
         return <MapPin className="w-4 h-4" />;
       case 'datdai':
         return <FileCheck className="w-4 h-4" />;
+      default:
+        return <Bookmark className="w-4 h-4" />;
     }
   };
 
@@ -154,6 +167,25 @@ export const TaskUpdateView: React.FC<TaskUpdateViewProps> = ({
     return matchStaff && matchStatus && matchSearch;
   });
 
+  // Filter Generic / Custom Tasks
+  const filteredGeneric = (genericTasksList || []).filter((item) => {
+    if (item.taskType !== currentTask) return false;
+    const matchStaff = !selectedStaffId || item.canBoId === selectedStaffId;
+    const matchStatus =
+      statusFilter === 'all' ||
+      (statusFilter === 'done' && item.isDone) ||
+      (statusFilter === 'pending' && !item.isDone);
+    const matchSearch =
+      !searchTerm ||
+      item.hoTen.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.toDanPho.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (item.canBoName && item.canBoName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (item.soHoSo && item.soHoSo.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (item.info1 && item.info1.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (item.note && item.note.toLowerCase().includes(searchTerm.toLowerCase()));
+    return matchStaff && matchStatus && matchSearch;
+  });
+
   const getRecordCount = () => {
     switch (currentTask) {
       case 'hkcch':
@@ -164,6 +196,8 @@ export const TaskUpdateView: React.FC<TaskUpdateViewProps> = ({
         return filteredDcttp.length;
       case 'datdai':
         return filteredDatdai.length;
+      default:
+        return filteredGeneric.length;
     }
   };
 
@@ -245,20 +279,37 @@ export const TaskUpdateView: React.FC<TaskUpdateViewProps> = ({
             <span>CHỌN NHIỆM VỤ CÔNG TÁC</span>
           </span>
 
-          <button
-            type="button"
-            id="btn-add-record-top"
-            onClick={onOpenAddModal}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-700 hover:bg-red-800 text-white rounded-xl text-xs font-bold shadow-xs transition active:scale-95"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Thêm bản ghi mới</span>
-          </button>
+          <div className="flex items-center gap-2">
+            {onOpenManageCategories && (
+              <button
+                type="button"
+                id="btn-manage-categories-top"
+                onClick={onOpenManageCategories}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 rounded-xl text-xs font-bold shadow-xs transition active:scale-95"
+                title="Thêm hoặc xóa các loại chỉ tiêu nhiệm vụ"
+              >
+                <Sliders className="w-3.5 h-3.5 text-amber-400" />
+                <span className="hidden sm:inline">Quản lý</span>
+                <span>Chỉ tiêu ({taskCategories.length})</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              id="btn-add-record-top"
+              onClick={onOpenAddModal}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-red-700 hover:bg-red-800 text-white rounded-xl text-xs font-bold shadow-xs transition active:scale-95"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Thêm bản ghi mới</span>
+            </button>
+          </div>
         </div>
 
-        {/* 4 Task Buttons */}
+        {/* Dynamic Task Buttons */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
-          {(['hkcch', 'matuy', 'dcttp', 'datdai'] as TaskType[]).map((taskKey) => {
+          {taskCategories.map((cat) => {
+            const taskKey = cat.id;
             const isSelected = currentTask === taskKey;
             const cfg = TASK_CONFIG[taskKey];
 
@@ -441,7 +492,7 @@ export const TaskUpdateView: React.FC<TaskUpdateViewProps> = ({
                   key={record.stt}
                   record={record}
                   onToggleStatus={onUpdateHkcch}
-                  onDelete={(stt) => onDeleteRecord('hkcch', stt)}
+                  onDelete={(stt) => onDeleteRecord('hkcch', stt, record.hoTen)}
                 />
               ))
             )}
@@ -460,7 +511,7 @@ export const TaskUpdateView: React.FC<TaskUpdateViewProps> = ({
                   key={record.stt}
                   record={record}
                   onUpdateTest={onUpdateMatuy}
-                  onDelete={(stt) => onDeleteRecord('matuy', stt)}
+                  onDelete={(stt) => onDeleteRecord('matuy', stt, record.hoTen)}
                 />
               ))
             )}
@@ -479,7 +530,7 @@ export const TaskUpdateView: React.FC<TaskUpdateViewProps> = ({
                   key={record.stt}
                   record={record}
                   onUpdateCount={onUpdateDcttp}
-                  onDelete={(stt) => onDeleteRecord('dcttp', stt)}
+                  onDelete={(stt) => onDeleteRecord('dcttp', stt, record.hoTen)}
                 />
               ))
             )}
@@ -498,7 +549,30 @@ export const TaskUpdateView: React.FC<TaskUpdateViewProps> = ({
                   key={record.stt}
                   record={record}
                   onUpdateRecord={onUpdateDatdai}
-                  onDelete={(stt) => onDeleteRecord('datdai', stt)}
+                  onDelete={(stt) => onDeleteRecord('datdai', stt, record.chuHo)}
+                />
+              ))
+            )}
+          </>
+        )}
+
+        {/* Custom / Generic Task Categories */}
+        {!['hkcch', 'matuy', 'dcttp', 'datdai'].includes(currentTask) && (
+          <>
+            {filteredGeneric.length === 0 ? (
+              <div className="p-8 text-center bg-white rounded-2xl border border-slate-200 text-slate-500 text-xs">
+                Chưa có bản ghi nào cho chỉ tiêu "{taskConfig.title}". Hãy bấm nút "+ Thêm bản ghi mới" ở trên để giao hoặc nhập dữ liệu.
+              </div>
+            ) : (
+              filteredGeneric.map((record) => (
+                <GenericTaskCard
+                  key={record.stt}
+                  record={record}
+                  unit={taskConfig.unit}
+                  onToggleStatus={(stt, isDone, note) =>
+                    onUpdateGenericTask && onUpdateGenericTask(stt, isDone, note)
+                  }
+                  onDelete={(stt) => onDeleteRecord(currentTask, stt, record.hoTen)}
                 />
               ))
             )}

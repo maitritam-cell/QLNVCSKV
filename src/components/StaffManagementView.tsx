@@ -7,7 +7,7 @@ import {
   DCTTPRecord,
   DatDaiRecord
 } from '../types';
-import { TASK_CONFIG } from '../data/storage';
+import { TASK_CONFIG, getTaskCategories } from '../data/storage';
 import {
   UserPlus,
   Trash2,
@@ -736,18 +736,18 @@ export const StaffManagementView: React.FC<StaffManagementViewProps> = ({
               <div>
                 <label className="font-bold text-slate-700 block mb-1">Loại nhiệm vụ công tác:</label>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
-                  {(['hkcch', 'matuy', 'dcttp', 'datdai'] as TaskType[]).map((t) => (
+                  {getTaskCategories().map((cat) => (
                     <button
-                      key={t}
+                      key={cat.id}
                       type="button"
-                      onClick={() => setAssignTaskType(t)}
+                      onClick={() => setAssignTaskType(cat.id)}
                       className={`p-2 rounded-xl text-left border text-xs font-bold transition ${
-                        assignTaskType === t
+                        assignTaskType === cat.id
                           ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
                           : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
                       }`}
                     >
-                      {TASK_CONFIG[t].shortTitle}
+                      {cat.shortTitle}
                     </button>
                   ))}
                 </div>
@@ -924,6 +924,32 @@ export const StaffManagementView: React.FC<StaffManagementViewProps> = ({
                       placeholder="VD: Số 45 Phố Huế"
                       className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200"
                       required
+                    />
+                  </div>
+                </>
+              )}
+
+              {!['hkcch', 'matuy', 'dcttp', 'datdai'].includes(assignTaskType) && (
+                <>
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">Tên đối tượng / Mục tiêu / Người liên quan:</label>
+                    <input
+                      type="text"
+                      value={assignName}
+                      onChange={(e) => setAssignName(e.target.value)}
+                      placeholder="VD: Nguyễn Văn Nam"
+                      className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 font-bold"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">Mã hồ sơ / Nội dung chi tiết:</label>
+                    <input
+                      type="text"
+                      value={assignInfo1}
+                      onChange={(e) => setAssignInfo1(e.target.value)}
+                      placeholder="VD: HS-1234, nội dung chi tiết..."
+                      className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200"
                     />
                   </div>
                 </>

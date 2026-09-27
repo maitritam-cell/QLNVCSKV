@@ -10,7 +10,9 @@ import {
   AllDashboardStats,
   AppConfig,
   UserAccount,
-  UserRole
+  UserRole,
+  TaskCategoryConfig,
+  GenericTaskRecord
 } from '../types';
 import {
   INITIAL_STAFF,
@@ -29,42 +31,131 @@ export const STORAGE_KEYS = {
   CONFIG: 'nhiemvu_app_config_v1',
   ACCOUNTS: 'nhiemvu_user_accounts_v1',
   CURRENT_USER: 'nhiemvu_current_user_v1',
-  DELETED_ACCOUNTS: 'nhiemvu_deleted_accounts_v1'
+  DELETED_ACCOUNTS: 'nhiemvu_deleted_accounts_v1',
+  TASK_CATEGORIES: 'nhiemvu_task_categories_v2',
+  GENERIC_TASKS: 'nhiemvu_generic_tasks_v2'
 };
 
-export const TASK_CONFIG: Record<
-  TaskType,
-  { title: string; shortTitle: string; unit: string; badge: string; color: string }
-> = {
-  hkcch: {
+export const DEFAULT_TASK_CATEGORIES: TaskCategoryConfig[] = [
+  {
+    id: 'hkcch',
     title: 'Hộ Không Có Chủ Hộ (HKCCH)',
     shortTitle: 'HKCCH',
     unit: 'hộ',
     badge: 'Chỉ tiêu 1',
     color: 'blue'
   },
-  matuy: {
+  {
+    id: 'matuy',
     title: 'Xét Nghiệm Đối Tượng Ma Túy',
     shortTitle: 'Ma túy',
     unit: 'đối tượng',
     badge: 'Chỉ tiêu 2',
     color: 'amber'
   },
-  dcttp: {
+  {
+    id: 'dcttp',
     title: 'Điều Chỉnh Tổ Dân Phố (ĐCTTP)',
     shortTitle: 'ĐCTTP',
     unit: 'nhân khẩu',
     badge: 'Chỉ tiêu 3',
     color: 'emerald'
   },
-  datdai: {
+  {
+    id: 'datdai',
     title: 'Làm Sạch Dữ Liệu Đất Đai (Lần 4)',
     shortTitle: 'Đất đai (L4)',
     unit: 'thửa / chủ hộ',
     badge: 'Chỉ tiêu 4',
     color: 'purple'
   }
-};
+];
+
+export function getTaskCategories(): TaskCategoryConfig[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.TASK_CATEGORIES);
+    if (!raw) {
+      localStorage.setItem(STORAGE_KEYS.TASK_CATEGORIES, JSON.stringify(DEFAULT_TASK_CATEGORIES));
+      return DEFAULT_TASK_CATEGORIES;
+    }
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) && parsed.length > 0 ? parsed : DEFAULT_TASK_CATEGORIES;
+  } catch {
+    return DEFAULT_TASK_CATEGORIES;
+  }
+}
+
+export function saveTaskCategories(list: TaskCategoryConfig[]): void {
+  localStorage.setItem(STORAGE_KEYS.TASK_CATEGORIES, JSON.stringify(list));
+}
+
+export function addTaskCategory(data: Omit<TaskCategoryConfig, 'id'>): TaskCategoryConfig {
+  const categories = getTaskCategories();
+  const id = `custom_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+  const newCat: TaskCategoryConfig = {
+    ...data,
+    id,
+    isCustom: true
+  };
+  categories.push(newCat);
+  saveTaskCategories(categories);
+  return newCat;
+}
+
+export function deleteTaskCategory(id: string): void {
+  const current = getTaskCategories();
+  const filtered = current.filter((c) => c.id !== id);
+  saveTaskCategories(filtered);
+
+  // If generic tasks exist for this category, remove them
+  const genericList = getGenericTasksList();
+  const remaining = genericList.filter((item) => item.taskType !== id);
+  saveGenericTasksList(remaining);
+}
+
+export function updateTaskCategory(cat: TaskCategoryConfig): boolean {
+  const categories = getTaskCategories();
+  const idx = categories.findIndex((c) => c.id === cat.id);
+  if (idx === -1) return false;
+  categories[idx] = { ...cat };
+  saveTaskCategories(categories);
+  return true;
+}
+
+export function getGenericTasksList(): GenericTaskRecord[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.GENERIC_TASKS);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveGenericTasksList(list: GenericTaskRecord[]): void {
+  localStorage.setItem(STORAGE_KEYS.GENERIC_TASKS, JSON.stringify(list));
+}
+
+export const TASK_CONFIG: Record<
+  string,
+  { title: string; shortTitle: string; unit: string; badge: string; color: string; id?: string; isCustom?: boolean }
+> = new Proxy(
+  {},
+  {
+    get(_target, prop: string) {
+      const categories = getTaskCategories();
+      const found = categories.find((c) => c.id === prop);
+      if (found) return found;
+      return {
+        id: prop,
+        title: prop,
+        shortTitle: prop,
+        unit: 'mục',
+        badge: 'Chỉ tiêu',
+        color: 'slate'
+      };
+    }
+  }
+);
 
 export function getStaffList(): Staff[] {
   try {
@@ -219,16 +310,29 @@ export function calculateTaskStats(taskType: TaskType, staffIdFilter?: string): 
     return { total, done, remain, percent };
   }
 
-  return { total: 0, done: 0, remain: 0, percent: 0 };
+  // Support for custom / generic task categories
+  const genericList = getGenericTasksList().filter(
+    (r) => r.taskType === taskType && (!staffIdFilter || r.canBoId === staffIdFilter)
+  );
+  const total = genericList.length;
+  const done = genericList.filter((r) => r.isDone).length;
+  const remain = total - done;
+  const percent = total > 0 ? Math.round((done / total) * 100) : 0;
+  return { total, done, remain, percent };
 }
 
 export function getAllDashboardStats(): AllDashboardStats {
-  return {
+  const categories = getTaskCategories();
+  const res: AllDashboardStats = {
     hkcch: calculateTaskStats('hkcch'),
     matuy: calculateTaskStats('matuy'),
     dcttp: calculateTaskStats('dcttp'),
     datdai: calculateTaskStats('datdai')
   };
+  categories.forEach((cat) => {
+    res[cat.id] = calculateTaskStats(cat.id);
+  });
+  return res;
 }
 
 export function getStaffStatsForTask(taskType: TaskType): StaffTaskStats[] {

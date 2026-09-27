@@ -10,12 +10,8 @@ import {
   EyeOff,
   AlertCircle,
   LogIn,
-  CheckCircle2,
-  Sparkles,
-  Award,
-  ChevronRight,
   HelpCircle,
-  ExternalLink
+  CheckCircle2
 } from 'lucide-react';
 
 interface LoginViewProps {
@@ -30,7 +26,6 @@ export const LoginView: React.FC<LoginViewProps> = ({
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'form' | 'quick'>('form');
   const [showHelpModal, setShowHelpModal] = useState(false);
 
   const availableAccounts = getUserAccounts();
@@ -51,20 +46,6 @@ export const LoginView: React.FC<LoginViewProps> = ({
         setError(res.error || 'Đăng nhập không thành công. Vui lòng kiểm tra lại thông tin.');
       }
     }, 200);
-  };
-
-  const handleQuickLogin = (account: UserAccount) => {
-    setError(null);
-    setLoading(true);
-    setTimeout(() => {
-      const res = authenticateUser(account.username, account.password);
-      setLoading(false);
-      if (res.success && res.user) {
-        onLoginSuccess(res.user);
-      } else {
-        setError('Không thể đăng nhập bằng tài khoản này');
-      }
-    }, 150);
   };
 
   return (
@@ -111,53 +92,16 @@ export const LoginView: React.FC<LoginViewProps> = ({
             </p>
           </div>
 
-          {/* Tab Selector: Form vs 1-Click Demo */}
-          <div className="grid grid-cols-2 p-1.5 bg-slate-950/60 m-4 rounded-xl border border-slate-800">
-            <button
-              type="button"
-              id="btn-tab-form-login"
-              onClick={() => {
-                setActiveTab('form');
-                setError(null);
-              }}
-              className={`py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
-                activeTab === 'form'
-                  ? 'bg-red-800 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <LogIn className="w-3.5 h-3.5" />
-              <span>Nhập Tài Khoản</span>
-            </button>
-            <button
-              type="button"
-              id="btn-tab-quick-login"
-              onClick={() => {
-                setActiveTab('quick');
-                setError(null);
-              }}
-              className={`py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
-                activeTab === 'quick'
-                  ? 'bg-amber-500 text-slate-950 shadow-sm font-extrabold'
-                  : 'text-amber-400 hover:text-amber-200'
-              }`}
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Đăng Nhập 1 Chạm</span>
-            </button>
-          </div>
-
           {/* Error Banner */}
           {error && (
-            <div className="mx-5 mb-4 p-3 rounded-xl bg-red-950/80 border border-red-600/50 text-red-200 text-xs flex items-start gap-2 animate-in fade-in duration-200">
+            <div className="mx-6 mt-4 p-3 rounded-xl bg-red-950/80 border border-red-600/50 text-red-200 text-xs flex items-start gap-2 animate-in fade-in duration-200">
               <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
               <div className="flex-1 leading-relaxed">{error}</div>
             </div>
           )}
 
-          {/* Form Tab */}
-          {activeTab === 'form' && (
-            <form onSubmit={handleSubmit} className="px-6 pb-6 space-y-4">
+          {/* Login Form */}
+          <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div>
                 <label className="block text-xs font-bold text-slate-300 mb-1.5">
                   Tên đăng nhập / Số điện thoại / Mã CB
@@ -230,110 +174,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                   </>
                 )}
               </button>
-
-              {/* Quick shortcut preview */}
-              <div className="pt-2 text-center">
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('quick')}
-                  className="text-xs text-amber-300 hover:text-amber-200 flex items-center justify-center gap-1 mx-auto underline-offset-4 hover:underline"
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Hoặc bấm vào đây để chọn nhanh tài khoản (Đăng nhập 1 chạm)</span>
-                </button>
-              </div>
             </form>
-          )}
-
-          {/* Quick 1-Click Login Tab */}
-          {activeTab === 'quick' && (
-            <div className="px-5 pb-6 space-y-3">
-              <p className="text-xs text-slate-300 mb-2">
-                Chọn tài khoản bên dưới để đăng nhập ngay mà không cần gõ mật khẩu:
-              </p>
-
-              {/* Admin Accounts List */}
-              <div className="text-[11px] font-bold text-amber-400 uppercase tracking-wider pt-1 flex items-center gap-1.5">
-                <Award className="w-3.5 h-3.5 text-amber-400" />
-                <span>Ban Chỉ huy & Quản trị viên (Toàn quyền):</span>
-              </div>
-
-              <div className="space-y-2">
-                {adminAccounts.map((admin) => {
-                  const isPrimary = admin.username === 'maitritam' || admin.email === 'maitritam@gmail.com';
-                  return (
-                    <button
-                      key={admin.id}
-                      type="button"
-                      id={`btn-quick-login-${admin.username}`}
-                      onClick={() => handleQuickLogin(admin)}
-                      className={`w-full text-left p-3 rounded-xl transition group flex items-center justify-between ${
-                        isPrimary
-                          ? 'bg-gradient-to-r from-red-950 via-amber-950/70 to-slate-900 border-2 border-amber-400 shadow-lg shadow-amber-900/30 hover:border-amber-300'
-                          : 'bg-slate-950/80 hover:bg-slate-800 border border-amber-500/50 hover:border-amber-400'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <div className={`w-9 h-9 rounded-lg font-black flex items-center justify-center text-xs shadow ${
-                          isPrimary ? 'bg-amber-400 text-slate-950 ring-2 ring-amber-300/60' : 'bg-amber-500/30 text-amber-300 border border-amber-400/40'
-                        }`}>
-                          BCH
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-xs font-black text-amber-300">
-                              {admin.rank} {admin.name}
-                            </span>
-                            <span className={`text-[10px] px-1.5 py-0.2 rounded font-bold ${
-                              isPrimary ? 'bg-amber-400 text-slate-950 font-black' : 'bg-red-600 text-white'
-                            }`}>
-                              {isPrimary ? 'TÀI KHOẢN CỦA BẠN' : 'QUẢN TRỊ'}
-                            </span>
-                          </div>
-                          <div className="text-[11px] text-slate-300">
-                            {admin.title} • {admin.email || admin.username}
-                          </div>
-                        </div>
-                      </div>
-                      <ChevronRight className="w-4 h-4 text-amber-400 group-hover:translate-x-1 transition-transform" />
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Officers List */}
-              <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider pt-2">
-                Cán bộ Cảnh sát khu vực (CSKV):
-              </div>
-
-              <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
-                {officerAccounts.map((officer) => (
-                  <button
-                    key={officer.id}
-                    type="button"
-                    id={`btn-quick-login-${officer.username}`}
-                    onClick={() => handleQuickLogin(officer)}
-                    className="w-full text-left p-2.5 rounded-xl bg-slate-950/60 hover:bg-slate-800 border border-slate-700/80 hover:border-amber-400/50 transition group flex items-center justify-between"
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-lg bg-blue-900/60 border border-blue-400/40 text-blue-300 font-bold flex items-center justify-center text-xs">
-                        {officer.rank.charAt(0)}
-                      </div>
-                      <div>
-                        <div className="text-xs font-bold text-white group-hover:text-amber-300 transition">
-                          {officer.rank} {officer.name}
-                        </div>
-                        <div className="text-[11px] text-slate-400">
-                          {officer.assignedAreas?.join(', ') || 'Chưa gán tổ'} • SĐT: {officer.phone}
-                        </div>
-                      </div>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-amber-400 group-hover:translate-x-1 transition" />
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
 
         </div>
       </div>
