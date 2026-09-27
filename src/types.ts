@@ -21,12 +21,24 @@ export interface TaskInfo {
   color: string;
 }
 
+export interface ResidentialGroup {
+  id: string;
+  name: string;
+  code?: string;
+  householdCount?: number;
+  populationCount?: number;
+  assignedStaffIds: string[];
+  note?: string;
+}
+
 export interface Staff {
   id: string;
   name: string;
   rank: string; // Thượng úy, Đại úy, Thiếu tá...
   phone: string;
-  assignedAreas: string[]; // Tổ 1, Tổ 2...
+  assignedAreas: string[]; // Tổ 1, Tổ 2... (rỗng nếu không phụ trách địa bàn)
+  isNoArea?: boolean; // Đánh dấu cán bộ không phụ trách địa bàn
+  roleDescription?: string;
   avatarBg?: string;
 }
 

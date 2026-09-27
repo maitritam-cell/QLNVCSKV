@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Download, Upload, RotateCcw, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { X, Download, Upload, RotateCcw, AlertTriangle, CheckCircle2, FileSpreadsheet, Building } from 'lucide-react';
 import {
   getStaffList,
   getHkcchList,
@@ -17,12 +17,16 @@ interface DataManagementModalProps {
   isOpen: boolean;
   onClose: () => void;
   onDataChanged: () => void;
+  onOpenExcelModal?: () => void;
+  onOpenResidentialModal?: () => void;
 }
 
 export const DataManagementModal: React.FC<DataManagementModalProps> = ({
   isOpen,
   onClose,
-  onDataChanged
+  onDataChanged,
+  onOpenExcelModal,
+  onOpenResidentialModal
 }) => {
   const [feedbackMessage, setFeedbackMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -142,6 +146,63 @@ export const DataManagementModal: React.FC<DataManagementModalProps> = ({
           )}
 
           <div className="space-y-3">
+            {/* Excel by Residential Group */}
+            {onOpenExcelModal && (
+              <div className="p-3.5 bg-emerald-50/70 rounded-xl border border-emerald-200 flex items-center justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <FileSpreadsheet className="w-4 h-4 text-emerald-700" />
+                    <h4 className="text-xs font-bold text-emerald-950">Excel Chỉ Tiêu Theo Tổ Dân Phố</h4>
+                    <span className="px-1.5 py-0.2 bg-emerald-200 text-emerald-800 text-[10px] font-extrabold rounded-md">
+                      Tự phân loại
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-emerald-700 mt-0.5">
+                    Nhập/xuất file Excel chỉ tiêu theo từng tổ, tự động gán cán bộ phụ trách
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  id="btn-open-excel-from-data-modal"
+                  onClick={() => {
+                    onClose();
+                    onOpenExcelModal();
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold transition shadow-xs shrink-0 cursor-pointer"
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5" />
+                  <span>Mở Excel</span>
+                </button>
+              </div>
+            )}
+
+            {/* Residential Groups Management */}
+            {onOpenResidentialModal && (
+              <div className="p-3.5 bg-blue-50/70 rounded-xl border border-blue-200 flex items-center justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <Building className="w-4 h-4 text-blue-700" />
+                    <h4 className="text-xs font-bold text-blue-950">Quản Lý Danh Sách Tổ Dân Phố</h4>
+                  </div>
+                  <p className="text-[11px] text-blue-700 mt-0.5">
+                    Tạo mới, sửa, xóa tổ dân phố và phân công cán bộ quản lý địa bàn
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  id="btn-open-groups-from-data-modal"
+                  onClick={() => {
+                    onClose();
+                    onOpenResidentialModal();
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-2 bg-blue-700 hover:bg-blue-800 text-white rounded-lg text-xs font-bold transition shadow-xs shrink-0 cursor-pointer"
+                >
+                  <Building className="w-3.5 h-3.5" />
+                  <span>Quản lý Tổ</span>
+                </button>
+              </div>
+            )}
+
             {/* Export */}
             <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between gap-3">
               <div>

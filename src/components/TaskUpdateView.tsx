@@ -10,7 +10,7 @@ import {
   UserAccount,
   GenericTaskRecord
 } from '../types';
-import { TASK_CONFIG, getTaskCategories } from '../data/storage';
+import { TASK_CONFIG, getTaskCategories, getResidentialGroups } from '../data/storage';
 import { HkcchCard } from './HkcchCard';
 import { MatuyCard } from './MatuyCard';
 import { DcttpCard } from './DcttpCard';
@@ -30,7 +30,12 @@ import {
   ShieldCheck,
   UserCheck,
   Sliders,
-  Bookmark
+  Bookmark,
+  Building,
+  Filter,
+  CheckCircle2,
+  AlertCircle,
+  FileSpreadsheet
 } from 'lucide-react';
 
 interface TaskUpdateViewProps {
@@ -59,6 +64,7 @@ interface TaskUpdateViewProps {
   onDeleteRecord: (taskType: TaskType, stt: number, recordTitle?: string) => void;
   onOpenAddModal: () => void;
   onOpenManageCategories?: () => void;
+  onOpenExcelModal?: () => void;
 }
 
 export const TaskUpdateView: React.FC<TaskUpdateViewProps> = ({
@@ -81,13 +87,16 @@ export const TaskUpdateView: React.FC<TaskUpdateViewProps> = ({
   onUpdateGenericTask,
   onDeleteRecord,
   onOpenAddModal,
-  onOpenManageCategories
+  onOpenManageCategories,
+  onOpenExcelModal
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'done' | 'pending'>('all');
+  const [selectedToDanPho, setSelectedToDanPho] = useState<string>('');
 
   const taskCategories = getTaskCategories();
   const taskConfig = TASK_CONFIG[currentTask];
+  const residentialGroups = getResidentialGroups();
 
   const getTaskIcon = (taskKey: TaskType) => {
     switch (taskKey) {
@@ -104,77 +113,66 @@ export const TaskUpdateView: React.FC<TaskUpdateViewProps> = ({
     }
   };
 
-  // Filter HKCCH
-  const filteredHkcch = hkcchList.filter((item) => {
+  // Helper match for To Dan Pho
+  const checkToDanPhoMatch = (itemTo: string) => {
+    if (!selectedToDanPho) return true;
+    const a = itemTo.trim().toLowerCase().replace(/tổ\s*dân\s*phố\s*/i, 'tổ ');
+    const b = selectedToDanPho.trim().toLowerCase().replace(/tổ\s*dân\s*phố\s*/i, 'tổ ');
+    return a === b || itemTo === selectedToDanPho || a.includes(b) || b.includes(a);
+  };
+
+  // Base unfiltered lists for current task (before status filter)
+  const baseHkcch = hkcchList.filter((item) => {
     const matchStaff = !selectedStaffId || item.canBoId === selectedStaffId;
-    const matchStatus =
-      statusFilter === 'all' ||
-      (statusFilter === 'done' && item.isDone) ||
-      (statusFilter === 'pending' && !item.isDone);
+    const matchTo = checkToDanPhoMatch(item.toDanPho);
     const matchSearch =
       !searchTerm ||
       item.hoTen.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.soHoSo.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.toDanPho.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (item.note && item.note.toLowerCase().includes(searchTerm.toLowerCase()));
-    return matchStaff && matchStatus && matchSearch;
+    return matchStaff && matchTo && matchSearch;
   });
 
-  // Filter Matuy
-  const filteredMatuy = matuyList.filter((item) => {
+  const baseMatuy = matuyList.filter((item) => {
     const matchStaff = !selectedStaffId || item.canBoId === selectedStaffId;
-    const matchStatus =
-      statusFilter === 'all' ||
-      (statusFilter === 'done' && item.isDone) ||
-      (statusFilter === 'pending' && !item.isDone);
+    const matchTo = checkToDanPhoMatch(item.toDanPho);
     const matchSearch =
       !searchTerm ||
       item.hoTen.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.namSinh.includes(searchTerm) ||
       (item.soCMND && item.soCMND.includes(searchTerm)) ||
       item.toDanPho.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchStaff && matchStatus && matchSearch;
+    return matchStaff && matchTo && matchSearch;
   });
 
-  // Filter DCTTP
-  const filteredDcttp = dcttpList.filter((item) => {
+  const baseDcttp = dcttpList.filter((item) => {
     const matchStaff = !selectedStaffId || item.canBoId === selectedStaffId;
-    const matchStatus =
-      statusFilter === 'all' ||
-      (statusFilter === 'done' && item.isDone) ||
-      (statusFilter === 'pending' && !item.isDone);
+    const matchTo = checkToDanPhoMatch(item.toDanPho);
     const matchSearch =
       !searchTerm ||
       item.hoTen.toLowerCase().includes(searchTerm.toLowerCase()) ||
       String(item.tongNhanKhau).includes(searchTerm) ||
       item.toDanPho.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchStaff && matchStatus && matchSearch;
+    return matchStaff && matchTo && matchSearch;
   });
 
-  // Filter Datdai
-  const filteredDatdai = datdaiList.filter((item) => {
+  const baseDatdai = datdaiList.filter((item) => {
     const matchStaff = !selectedStaffId || item.canBoId === selectedStaffId;
-    const matchStatus =
-      statusFilter === 'all' ||
-      (statusFilter === 'done' && item.isDone) ||
-      (statusFilter === 'pending' && !item.isDone);
+    const matchTo = checkToDanPhoMatch(item.toDanPho);
     const matchSearch =
       !searchTerm ||
       item.chuHo.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.cmnd.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (item.cccd && item.cccd.includes(searchTerm)) ||
       item.diaChi.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchStaff && matchStatus && matchSearch;
+    return matchStaff && matchTo && matchSearch;
   });
 
-  // Filter Generic / Custom Tasks
-  const filteredGeneric = (genericTasksList || []).filter((item) => {
+  const baseGeneric = (genericTasksList || []).filter((item) => {
     if (item.taskType !== currentTask) return false;
     const matchStaff = !selectedStaffId || item.canBoId === selectedStaffId;
-    const matchStatus =
-      statusFilter === 'all' ||
-      (statusFilter === 'done' && item.isDone) ||
-      (statusFilter === 'pending' && !item.isDone);
+    const matchTo = checkToDanPhoMatch(item.toDanPho);
     const matchSearch =
       !searchTerm ||
       item.hoTen.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -183,23 +181,69 @@ export const TaskUpdateView: React.FC<TaskUpdateViewProps> = ({
       (item.soHoSo && item.soHoSo.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (item.info1 && item.info1.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (item.note && item.note.toLowerCase().includes(searchTerm.toLowerCase()));
-    return matchStaff && matchStatus && matchSearch;
+    return matchStaff && matchTo && matchSearch;
   });
 
-  const getRecordCount = () => {
-    switch (currentTask) {
-      case 'hkcch':
-        return filteredHkcch.length;
-      case 'matuy':
-        return filteredMatuy.length;
-      case 'dcttp':
-        return filteredDcttp.length;
-      case 'datdai':
-        return filteredDatdai.length;
-      default:
-        return filteredGeneric.length;
-    }
-  };
+  // Calculate real-time counts for current task
+  let totalCount = 0;
+  let doneCount = 0;
+  let pendingCount = 0;
+
+  if (currentTask === 'hkcch') {
+    totalCount = baseHkcch.length;
+    doneCount = baseHkcch.filter((r) => r.isDone).length;
+    pendingCount = totalCount - doneCount;
+  } else if (currentTask === 'matuy') {
+    totalCount = baseMatuy.length;
+    doneCount = baseMatuy.filter((r) => r.isDone || (r.ketQuaTest && r.ketQuaTest !== 'Chưa test')).length;
+    pendingCount = totalCount - doneCount;
+  } else if (currentTask === 'dcttp') {
+    totalCount = baseDcttp.length;
+    doneCount = baseDcttp.filter((r) => r.isDone || (r.soLuongDaDieuChinh >= r.tongNhanKhau && r.tongNhanKhau > 0)).length;
+    pendingCount = totalCount - doneCount;
+  } else if (currentTask === 'datdai') {
+    totalCount = baseDatdai.length;
+    doneCount = baseDatdai.filter((r) => r.isDone || r.status !== 'pending').length;
+    pendingCount = totalCount - doneCount;
+  } else {
+    totalCount = baseGeneric.length;
+    doneCount = baseGeneric.filter((r) => r.isDone).length;
+    pendingCount = totalCount - doneCount;
+  }
+
+  // Filtered lists with status applied
+  const filteredHkcch = baseHkcch.filter((item) => {
+    if (statusFilter === 'all') return true;
+    if (statusFilter === 'done') return item.isDone;
+    return !item.isDone;
+  });
+
+  const filteredMatuy = baseMatuy.filter((item) => {
+    const isFinished = item.isDone || (item.ketQuaTest && item.ketQuaTest !== 'Chưa test');
+    if (statusFilter === 'all') return true;
+    if (statusFilter === 'done') return isFinished;
+    return !isFinished;
+  });
+
+  const filteredDcttp = baseDcttp.filter((item) => {
+    const isFinished = item.isDone || (item.soLuongDaDieuChinh >= item.tongNhanKhau && item.tongNhanKhau > 0);
+    if (statusFilter === 'all') return true;
+    if (statusFilter === 'done') return isFinished;
+    return !isFinished;
+  });
+
+  const filteredDatdai = baseDatdai.filter((item) => {
+    const isFinished = item.isDone || item.status !== 'pending';
+    if (statusFilter === 'all') return true;
+    if (statusFilter === 'done') return isFinished;
+    return !isFinished;
+  });
+
+  const filteredGeneric = baseGeneric.filter((item) => {
+    if (statusFilter === 'all') return true;
+    if (statusFilter === 'done') return item.isDone;
+    return !item.isDone;
+  });
 
   return (
     <div className="space-y-4">
@@ -280,6 +324,20 @@ export const TaskUpdateView: React.FC<TaskUpdateViewProps> = ({
           </span>
 
           <div className="flex items-center gap-2">
+            {onOpenExcelModal && (
+              <button
+                type="button"
+                id="btn-open-excel-task-top"
+                onClick={onOpenExcelModal}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-800 hover:bg-emerald-700 text-emerald-200 border border-emerald-700 rounded-xl text-xs font-bold shadow-xs transition active:scale-95 cursor-pointer"
+                title="Nhập / Xuất Excel chỉ tiêu theo từng Tổ dân phố"
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
+                <span className="hidden sm:inline">Excel</span>
+                <span>Tổ Dân Phố</span>
+              </button>
+            )}
+
             {onOpenManageCategories && (
               <button
                 type="button"
@@ -409,72 +467,118 @@ export const TaskUpdateView: React.FC<TaskUpdateViewProps> = ({
         </div>
       </div>
 
-      {/* 3. STEP 3: SEARCH & FILTER CONTROLS */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-slate-200 shadow-xs">
-        {/* Search */}
-        <div className="relative flex-1 w-full">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-          <input
-            type="text"
-            id="input-search"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder={`Tìm kiếm tên, số hồ sơ, CCCD, địa bàn trong ${taskConfig.shortTitle}...`}
-            className="w-full pl-9 pr-8 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-red-600 focus:outline-hidden font-medium"
-          />
-          {searchTerm && (
-            <button
-              type="button"
-              onClick={() => setSearchTerm('')}
-              className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600"
+      {/* 3. STEP 3: SEARCH & FILTERS (STATUS & TỔ DÂN PHỐ) */}
+      <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-xs space-y-3">
+        {/* Top filter row: Search + Tổ Dân Phố Filter */}
+        <div className="flex flex-col sm:flex-row items-center gap-2.5">
+          {/* Search */}
+          <div className="relative flex-1 w-full">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+            <input
+              type="text"
+              id="input-search"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder={`Tìm kiếm tên, số hồ sơ, CCCD, địa chỉ trong ${taskConfig.shortTitle}...`}
+              className="w-full pl-9 pr-8 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-red-600 focus:outline-hidden font-medium transition"
+            />
+            {searchTerm && (
+              <button
+                type="button"
+                onClick={() => setSearchTerm('')}
+                className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* Filter by Tổ dân phố */}
+          <div className="relative w-full sm:w-60 shrink-0">
+            <Building className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+            <select
+              id="select-todanpho"
+              value={selectedToDanPho}
+              onChange={(e) => setSelectedToDanPho(e.target.value)}
+              className="w-full pl-9 pr-8 py-2 text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-red-600 focus:outline-hidden text-slate-800 transition"
             >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          )}
+              <option value="">-- Tất cả Tổ dân phố --</option>
+              {residentialGroups.map((g) => (
+                <option key={g.id} value={g.name}>
+                  {g.name} {g.code ? `(${g.code})` : ''}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
-        {/* Status Filter Buttons */}
-        <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl w-full sm:w-auto shrink-0 justify-center">
-          <button
-            type="button"
-            id="filter-all"
-            onClick={() => setStatusFilter('all')}
-            className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
-              statusFilter === 'all'
-                ? 'bg-white text-slate-900 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            Tất cả ({getRecordCount()})
-          </button>
+        {/* STATUS FILTER BUTTONS (PROMINENT TABS) */}
+        <div className="pt-2 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="text-[11px] font-bold text-slate-500 uppercase flex items-center gap-1.5">
+            <Filter className="w-3.5 h-3.5 text-red-600" />
+            <span>Lọc theo trạng thái thực hiện:</span>
+          </div>
 
-          <button
-            type="button"
-            id="filter-pending"
-            onClick={() => setStatusFilter('pending')}
-            className={`flex items-center gap-1 px-3 py-1 text-xs font-bold rounded-lg transition-all ${
-              statusFilter === 'pending'
-                ? 'bg-white text-red-700 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <Clock className="w-3.5 h-3.5" />
-            <span>Chưa làm</span>
-          </button>
+          <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100/90 rounded-xl w-full sm:w-auto">
+            {/* Tất cả */}
+            <button
+              type="button"
+              id="filter-all"
+              onClick={() => setStatusFilter('all')}
+              className={`px-3 py-1.5 text-xs font-black rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                statusFilter === 'all'
+                  ? 'bg-white text-slate-900 shadow-sm ring-1 ring-slate-300/80 scale-[1.02]'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+              }`}
+            >
+              <span>Tất cả</span>
+              <span className={`px-1.5 py-0.2 rounded-md text-[10px] font-mono ${
+                statusFilter === 'all' ? 'bg-slate-900 text-white' : 'bg-slate-200 text-slate-700'
+              }`}>
+                {totalCount}
+              </span>
+            </button>
 
-          <button
-            type="button"
-            id="filter-done"
-            onClick={() => setStatusFilter('done')}
-            className={`flex items-center gap-1 px-3 py-1 text-xs font-bold rounded-lg transition-all ${
-              statusFilter === 'done'
-                ? 'bg-white text-emerald-700 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <CheckCircle className="w-3.5 h-3.5" />
-            <span>Đã xong</span>
-          </button>
+            {/* Đã hoàn thành */}
+            <button
+              type="button"
+              id="filter-done"
+              onClick={() => setStatusFilter('done')}
+              className={`px-3 py-1.5 text-xs font-black rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                statusFilter === 'done'
+                  ? 'bg-emerald-600 text-white shadow-sm ring-1 ring-emerald-500 scale-[1.02]'
+                  : 'text-emerald-700 hover:text-emerald-900 hover:bg-emerald-50'
+              }`}
+            >
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              <span>Đã hoàn thành</span>
+              <span className={`px-1.5 py-0.2 rounded-md text-[10px] font-mono ${
+                statusFilter === 'done' ? 'bg-emerald-800 text-white' : 'bg-emerald-100 text-emerald-800'
+              }`}>
+                {doneCount}
+              </span>
+            </button>
+
+            {/* Chưa hoàn thành */}
+            <button
+              type="button"
+              id="filter-pending"
+              onClick={() => setStatusFilter('pending')}
+              className={`px-3 py-1.5 text-xs font-black rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                statusFilter === 'pending'
+                  ? 'bg-red-700 text-white shadow-sm ring-1 ring-red-600 scale-[1.02]'
+                  : 'text-red-700 hover:text-red-900 hover:bg-red-50'
+              }`}
+            >
+              <AlertCircle className="w-3.5 h-3.5" />
+              <span>Chưa hoàn thành</span>
+              <span className={`px-1.5 py-0.2 rounded-md text-[10px] font-mono ${
+                statusFilter === 'pending' ? 'bg-red-900 text-white' : 'bg-red-100 text-red-800'
+              }`}>
+                {pendingCount}
+              </span>
+            </button>
+          </div>
         </div>
       </div>
 

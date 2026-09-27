@@ -46,6 +46,8 @@ import { LoginView } from './components/LoginView';
 import { ChangePasswordModal } from './components/ChangePasswordModal';
 import { AccountManagementModal } from './components/AccountManagementModal';
 import { ManageTaskCategoriesModal } from './components/ManageTaskCategoriesModal';
+import { ResidentialGroupModal } from './components/ResidentialGroupModal';
+import { ExcelImportExportModal } from './components/ExcelImportExportModal';
 import { ShieldCheck, Check, Trash2, AlertTriangle } from 'lucide-react';
 
 export function App() {
@@ -55,6 +57,8 @@ export function App() {
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [isManageCategoriesOpen, setIsManageCategoriesOpen] = useState(false);
+  const [isResidentialModalOpen, setIsResidentialModalOpen] = useState(false);
+  const [isExcelModalOpen, setIsExcelModalOpen] = useState(false);
 
   const [currentTab, setCurrentTab] = useState<'update' | 'dashboard' | 'staff'>('update');
   const [currentTask, setCurrentTask] = useState<TaskType>('hkcch');

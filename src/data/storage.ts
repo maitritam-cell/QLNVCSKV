@@ -12,7 +12,8 @@ import {
   UserAccount,
   UserRole,
   TaskCategoryConfig,
-  GenericTaskRecord
+  GenericTaskRecord,
+  ResidentialGroup
 } from '../types';
 import {
   INITIAL_STAFF,
@@ -33,8 +34,220 @@ export const STORAGE_KEYS = {
   CURRENT_USER: 'nhiemvu_current_user_v1',
   DELETED_ACCOUNTS: 'nhiemvu_deleted_accounts_v1',
   TASK_CATEGORIES: 'nhiemvu_task_categories_v2',
-  GENERIC_TASKS: 'nhiemvu_generic_tasks_v2'
+  GENERIC_TASKS: 'nhiemvu_generic_tasks_v2',
+  RESIDENTIAL_GROUPS: 'nhiemvu_residential_groups_v1'
 };
+
+export const DEFAULT_RESIDENTIAL_GROUPS: ResidentialGroup[] = [
+  { id: 'tdp_1', name: 'Tổ 1', code: 'TDP01', assignedStaffIds: ['cb_hung'], householdCount: 220, populationCount: 850, note: 'Khu dân cư A' },
+  { id: 'tdp_2', name: 'Tổ 2', code: 'TDP02', assignedStaffIds: ['cb_hung'], householdCount: 195, populationCount: 780, note: 'Khu tập thể B' },
+  { id: 'tdp_3', name: 'Tổ 3', code: 'TDP03', assignedStaffIds: ['cb_long'], householdCount: 260, populationCount: 990, note: 'Khu phố trung tâm' },
+  { id: 'tdp_4', name: 'Tổ 4', code: 'TDP04', assignedStaffIds: ['cb_long'], householdCount: 180, populationCount: 710, note: 'Khu tập thể quân đội' },
+  { id: 'tdp_5', name: 'Tổ 5', code: 'TDP05', assignedStaffIds: ['cb_nam'], householdCount: 210, populationCount: 820, note: 'Mặt phố chính' },
+  { id: 'tdp_6', name: 'Tổ 6', code: 'TDP06', assignedStaffIds: ['cb_nam'], householdCount: 240, populationCount: 930, note: 'Khu dân cư mới' },
+  { id: 'tdp_7', name: 'Tổ 7', code: 'TDP07', assignedStaffIds: ['cb_duc'], householdCount: 205, populationCount: 800, note: 'Khu tập thể nhà máy' },
+  { id: 'tdp_8', name: 'Tổ 8', code: 'TDP08', assignedStaffIds: ['cb_bao'], householdCount: 230, populationCount: 890, note: 'Ven hồ' },
+  { id: 'tdp_9', name: 'Tổ 9', code: 'TDP09', assignedStaffIds: ['cb_mai'], householdCount: 190, populationCount: 750, note: 'Chợ trung tâm' },
+  { id: 'tdp_10', name: 'Tổ 10', code: 'TDP10', assignedStaffIds: ['cb_mai'], householdCount: 215, populationCount: 840, note: 'Khu bờ kè' }
+];
+
+export function getResidentialGroups(): ResidentialGroup[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.RESIDENTIAL_GROUPS);
+    if (!raw) {
+      localStorage.setItem(STORAGE_KEYS.RESIDENTIAL_GROUPS, JSON.stringify(DEFAULT_RESIDENTIAL_GROUPS));
+      return DEFAULT_RESIDENTIAL_GROUPS;
+    }
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) && parsed.length > 0 ? parsed : DEFAULT_RESIDENTIAL_GROUPS;
+  } catch {
+    return DEFAULT_RESIDENTIAL_GROUPS;
+  }
+}
+
+export function saveResidentialGroups(groups: ResidentialGroup[]): void {
+  localStorage.setItem(STORAGE_KEYS.RESIDENTIAL_GROUPS, JSON.stringify(groups));
+}
+
+export function addResidentialGroup(data: Omit<ResidentialGroup, 'id'>): ResidentialGroup {
+  const list = getResidentialGroups();
+  const id = `tdp_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+  const newGroup: ResidentialGroup = {
+    ...data,
+    id
+  };
+  list.push(newGroup);
+  saveResidentialGroups(list);
+  return newGroup;
+}
+
+export function updateResidentialGroup(group: ResidentialGroup): boolean {
+  const list = getResidentialGroups();
+  const idx = list.findIndex((g) => g.id === group.id);
+  if (idx === -1) return false;
+  list[idx] = { ...group };
+  saveResidentialGroups(list);
+  return true;
+}
+
+export function deleteResidentialGroup(id: string): void {
+  const list = getResidentialGroups();
+  const group = list.find((g) => g.id === id);
+  const filtered = list.filter((g) => g.id !== id);
+  saveResidentialGroups(filtered);
+
+  // Also remove from any staff's assignedAreas
+  if (group) {
+    const staffList = getStaffList();
+    const updatedStaff = staffList.map((s) => ({
+      ...s,
+      assignedAreas: (s.assignedAreas || []).filter((a) => a !== group.name && a !== `Tổ ${group.name}`)
+    }));
+    saveStaffList(updatedStaff);
+  }
+}
+
+/**
+ * Finds the staff officer responsible for a given residential group name (e.g. 'Tổ 1' or 'Tổ dân phố 1')
+ */
+export function findOfficerForResidentialGroup(groupName: string): Staff | undefined {
+  if (!groupName) return undefined;
+  const raw = groupName.trim();
+  const normalized = raw.toLowerCase().replace(/tổ\s*dân\s*phố\s*/i, 'tổ ').trim();
+  const staffList = getStaffList();
+
+  // Try exact match or normalized match on assignedAreas
+  for (const staff of staffList) {
+    if (!staff.assignedAreas || staff.assignedAreas.length === 0) continue;
+    for (const area of staff.assignedAreas) {
+      const areaNorm = area.trim().toLowerCase().replace(/tổ\s*dân\s*phố\s*/i, 'tổ ').trim();
+      if (areaNorm === normalized || raw === area || normalized.includes(areaNorm) || areaNorm.includes(normalized)) {
+        return staff;
+      }
+    }
+  }
+
+  // Also check residential group table
+  const groups = getResidentialGroups();
+  const foundGroup = groups.find((g) => {
+    const gNorm = g.name.trim().toLowerCase().replace(/tổ\s*dân\s*phố\s*/i, 'tổ ').trim();
+    return gNorm === normalized || g.name === raw || gNorm.includes(normalized) || normalized.includes(gNorm);
+  });
+  if (foundGroup && foundGroup.assignedStaffIds && foundGroup.assignedStaffIds.length > 0) {
+    const sId = foundGroup.assignedStaffIds[0];
+    return staffList.find((s) => s.id === sId);
+  }
+
+  return undefined;
+}
+
+/**
+ * Reassigns all existing records in database according to the currently assigned officer of their Tổ dân phố
+ */
+export function reclassifyAllRecordsByResidentialGroup(): {
+  reassignedHkcch: number;
+  reassignedMatuy: number;
+  reassignedDcttp: number;
+  reassignedDatdai: number;
+  reassignedGeneric: number;
+  total: number;
+} {
+  let reassignedHkcch = 0;
+  let reassignedMatuy = 0;
+  let reassignedDcttp = 0;
+  let reassignedDatdai = 0;
+  let reassignedGeneric = 0;
+
+  // 1. HKCCH
+  const hkList = getHkcchList();
+  const updatedHk = hkList.map((item) => {
+    const officer = findOfficerForResidentialGroup(item.toDanPho);
+    if (officer && officer.id !== item.canBoId) {
+      reassignedHkcch++;
+      return {
+        ...item,
+        canBoId: officer.id,
+        canBoName: `${officer.rank} ${officer.name}`
+      };
+    }
+    return item;
+  });
+  if (reassignedHkcch > 0) saveHkcchList(updatedHk);
+
+  // 2. Matuy
+  const mtList = getMatuyList();
+  const updatedMt = mtList.map((item) => {
+    const officer = findOfficerForResidentialGroup(item.toDanPho);
+    if (officer && officer.id !== item.canBoId) {
+      reassignedMatuy++;
+      return {
+        ...item,
+        canBoId: officer.id,
+        canBoName: `${officer.rank} ${officer.name}`
+      };
+    }
+    return item;
+  });
+  if (reassignedMatuy > 0) saveMatuyList(updatedMt);
+
+  // 3. DCTTP
+  const dcList = getDcttpList();
+  const updatedDc = dcList.map((item) => {
+    const officer = findOfficerForResidentialGroup(item.toDanPho);
+    if (officer && officer.id !== item.canBoId) {
+      reassignedDcttp++;
+      return {
+        ...item,
+        canBoId: officer.id,
+        canBoName: `${officer.rank} ${officer.name}`
+      };
+    }
+    return item;
+  });
+  if (reassignedDcttp > 0) saveDcttpList(updatedDc);
+
+  // 4. Datdai
+  const ddList = getDatdaiList();
+  const updatedDd = ddList.map((item) => {
+    const officer = findOfficerForResidentialGroup(item.toDanPho);
+    if (officer && officer.id !== item.canBoId) {
+      reassignedDatdai++;
+      return {
+        ...item,
+        canBoId: officer.id,
+        canBoName: `${officer.rank} ${officer.name}`
+      };
+    }
+    return item;
+  });
+  if (reassignedDatdai > 0) saveDatdaiList(updatedDd);
+
+  // 5. Generic
+  const gnList = getGenericTasksList();
+  const updatedGn = gnList.map((item) => {
+    const officer = findOfficerForResidentialGroup(item.toDanPho);
+    if (officer && officer.id !== item.canBoId) {
+      reassignedGeneric++;
+      return {
+        ...item,
+        canBoId: officer.id,
+        canBoName: `${officer.rank} ${officer.name}`
+      };
+    }
+    return item;
+  });
+  if (reassignedGeneric > 0) saveGenericTasksList(updatedGn);
+
+  const total = reassignedHkcch + reassignedMatuy + reassignedDcttp + reassignedDatdai + reassignedGeneric;
+  return {
+    reassignedHkcch,
+    reassignedMatuy,
+    reassignedDcttp,
+    reassignedDatdai,
+    reassignedGeneric,
+    total
+  };
+}
 
 export const DEFAULT_TASK_CATEGORIES: TaskCategoryConfig[] = [
   {

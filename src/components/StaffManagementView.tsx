@@ -7,7 +7,7 @@ import {
   DCTTPRecord,
   DatDaiRecord
 } from '../types';
-import { TASK_CONFIG, getTaskCategories } from '../data/storage';
+import { TASK_CONFIG, getTaskCategories, getResidentialGroups } from '../data/storage';
 import {
   UserPlus,
   Trash2,
@@ -27,7 +27,9 @@ import {
   FileCheck,
   CheckCircle2,
   Clock,
-  Users
+  Users,
+  Building,
+  FileSpreadsheet
 } from 'lucide-react';
 
 interface StaffManagementViewProps {
@@ -43,6 +45,8 @@ interface StaffManagementViewProps {
   onReassignTasks: (fromStaffId: string, toStaffId: string, taskType: 'all' | TaskType) => void;
   onNavigateToTaskView: (taskType: TaskType, staffId: string) => void;
   onOpenAccountManagement?: () => void;
+  onOpenResidentialGroupModal?: () => void;
+  onOpenExcelModal?: () => void;
 }
 
 export const StaffManagementView: React.FC<StaffManagementViewProps> = ({
@@ -57,7 +61,9 @@ export const StaffManagementView: React.FC<StaffManagementViewProps> = ({
   onAddTaskToStaff,
   onReassignTasks,
   onNavigateToTaskView,
-  onOpenAccountManagement
+  onOpenAccountManagement,
+  onOpenResidentialGroupModal,
+  onOpenExcelModal
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -102,7 +108,7 @@ export const StaffManagementView: React.FC<StaffManagementViewProps> = ({
     setStaffNameInput('');
     setStaffRankInput('Đại úy');
     setStaffPhoneInput('');
-    setStaffAreasInput(`Tổ ${nextNum}`);
+    setStaffAreasInput('');
     setStaffAvatarBg('bg-blue-600');
     setIsStaffModalOpen(true);
   };
@@ -114,7 +120,7 @@ export const StaffManagementView: React.FC<StaffManagementViewProps> = ({
     setStaffNameInput(s.name);
     setStaffRankInput(s.rank || 'Đại úy');
     setStaffPhoneInput(s.phone || '');
-    setStaffAreasInput(s.assignedAreas.join(', '));
+    setStaffAreasInput(s.assignedAreas ? s.assignedAreas.join(', ') : '');
     setStaffAvatarBg(s.avatarBg || 'bg-blue-600');
     setIsStaffModalOpen(true);
   };
@@ -137,7 +143,7 @@ export const StaffManagementView: React.FC<StaffManagementViewProps> = ({
       name: staffNameInput.trim(),
       rank: staffRankInput,
       phone: staffPhoneInput.trim(),
-      assignedAreas: areas.length > 0 ? areas : ['Tổ 1'],
+      assignedAreas: areas, // Can be empty if officer has no assigned area (internal / command / office)
       avatarBg: staffAvatarBg
     };
 
@@ -314,6 +320,32 @@ export const StaffManagementView: React.FC<StaffManagementViewProps> = ({
 
         {/* Action buttons */}
         <div className="flex items-center flex-wrap gap-2 shrink-0">
+          {onOpenResidentialGroupModal && (
+            <button
+              type="button"
+              id="btn-open-residential-groups"
+              onClick={onOpenResidentialGroupModal}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-amber-300 font-bold text-xs border border-slate-700 shadow-xs transition active:scale-95"
+              title="Quản lý danh sách Tổ dân phố, gắn cán bộ phụ trách theo tổ"
+            >
+              <Building className="w-4 h-4 text-amber-400" />
+              <span>Tổ Dân Phố ({getResidentialGroups().length})</span>
+            </button>
+          )}
+
+          {onOpenExcelModal && (
+            <button
+              type="button"
+              id="btn-open-excel-modal-staff"
+              onClick={onOpenExcelModal}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs shadow-xs transition active:scale-95"
+              title="Nhập/xuất file Excel chỉ tiêu theo từng Tổ dân phố, tự động phân loại cán bộ"
+            >
+              <FileSpreadsheet className="w-4 h-4 text-emerald-200" />
+              <span>Excel Chỉ Tiêu Theo Tổ</span>
+            </button>
+          )}
+
           {onOpenAccountManagement && (
             <button
               type="button"
@@ -467,7 +499,9 @@ export const StaffManagementView: React.FC<StaffManagementViewProps> = ({
                           </span>
                         ))
                       ) : (
-                        <span className="text-slate-400 italic text-[11px]">Chưa phân công địa bàn</span>
+                        <span className="px-2 py-0.5 bg-amber-50 text-amber-800 text-[11px] font-semibold rounded-md border border-amber-200">
+                          Không phụ trách địa bàn (Nội bộ / Chỉ huy)
+                        </span>
                       )}
                     </div>
                   </div>
@@ -651,17 +685,65 @@ export const StaffManagementView: React.FC<StaffManagementViewProps> = ({
               </div>
 
               <div>
-                <label className="font-bold text-slate-700 block mb-1">
-                  Địa bàn / Tổ dân phố phụ trách (cách nhau bởi dấu phẩy):
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="font-bold text-slate-700 block">
+                    Địa bàn / Tổ dân phố phụ trách:
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setStaffAreasInput('')}
+                    className="text-[11px] text-amber-700 hover:text-amber-800 font-semibold underline cursor-pointer"
+                  >
+                    Không phụ trách địa bàn (Chỉ huy / Nội bộ)
+                  </button>
+                </div>
                 <input
                   type="text"
                   value={staffAreasInput}
                   onChange={(e) => setStaffAreasInput(e.target.value)}
-                  placeholder="VD: Tổ 1, Tổ 2, Tổ 3"
-                  className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200"
-                  required
+                  placeholder="Để trống nếu cán bộ chỉ huy/không phụ trách địa bàn"
+                  className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-xs font-medium"
                 />
+
+                {/* Clickable quick-select chips for Residential Groups */}
+                <div className="mt-2">
+                  <span className="text-[11px] text-slate-500 block mb-1 font-medium">
+                    Nhấp chọn nhanh Tổ dân phố (Có thể một cán bộ phụ trách nhiều tổ, hoặc để trống):
+                  </span>
+                  <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto p-2 bg-slate-50 rounded-xl border border-slate-200">
+                    {getResidentialGroups().map((g) => {
+                      const currentAreas = staffAreasInput.split(',').map((a) => a.trim()).filter(Boolean);
+                      const isSelected = currentAreas.some(
+                        (a) => a.toLowerCase() === g.name.toLowerCase() || a.toLowerCase() === `tổ ${g.name}`.toLowerCase()
+                      );
+                      return (
+                        <button
+                          key={g.id}
+                          type="button"
+                          onClick={() => {
+                            let nextAreas: string[];
+                            if (isSelected) {
+                              nextAreas = currentAreas.filter(
+                                (a) => a.toLowerCase() !== g.name.toLowerCase() && a.toLowerCase() !== `tổ ${g.name}`.toLowerCase()
+                              );
+                            } else {
+                              nextAreas = [...currentAreas, g.name];
+                            }
+                            setStaffAreasInput(nextAreas.join(', '));
+                          }}
+                          className={`px-2 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer ${
+                            isSelected
+                              ? 'bg-blue-600 text-white shadow-xs'
+                              : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
+                          }`}
+                        >
+                          {isSelected && <Check className="w-3 h-3" />}
+                          <span>{g.name}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
 
               <div>
