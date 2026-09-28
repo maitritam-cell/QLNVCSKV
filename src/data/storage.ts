@@ -109,6 +109,20 @@ function renameResidentialGroupReferences(oldName: string, newName: string): voi
   saveStaffList(updatedStaff);
   syncStaffToAccounts(updatedStaff);
 
+  const currentUser = getCurrentUser();
+  if (currentUser?.staffId) {
+    const currentStaff = updatedStaff.find((staff) => staff.id === currentUser.staffId);
+    if (currentStaff) {
+      setCurrentUser({
+        ...currentUser,
+        assignedAreas: currentStaff.assignedAreas,
+        name: currentStaff.name,
+        rank: currentStaff.rank,
+        phone: currentStaff.phone
+      });
+    }
+  }
+
   saveHkcchList(getHkcchList().map((item) => ({
     ...item,
     toDanPho: updateAreaName(item.toDanPho)
@@ -169,6 +183,20 @@ export function deleteResidentialGroup(id: string): void {
     }));
     saveStaffList(updatedStaff);
     syncStaffToAccounts(updatedStaff);
+
+    const currentUser = getCurrentUser();
+    if (currentUser?.staffId) {
+      const currentStaff = updatedStaff.find((staff) => staff.id === currentUser.staffId);
+      if (currentStaff) {
+        setCurrentUser({
+          ...currentUser,
+          assignedAreas: currentStaff.assignedAreas,
+          name: currentStaff.name,
+          rank: currentStaff.rank,
+          phone: currentStaff.phone
+        });
+      }
+    }
   }
 }
 
