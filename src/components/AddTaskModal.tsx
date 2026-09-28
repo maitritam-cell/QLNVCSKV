@@ -106,7 +106,7 @@ export const AddTaskModal: React.FC<AddTaskModalProps> = ({
         chuHo: hoTen.trim(),
         cmnd: cmnd.trim() || '012345678',
         namSinh: namSinh.trim() || '1980',
-        diaChi: diaChi.trim() || 'Tổ dân phố 1',
+        diaChi: diaChi.trim() || toDanPho.trim(),
         toDanPho: toDanPho.trim(),
         staffId: selectedStaffId,
         staffName,
