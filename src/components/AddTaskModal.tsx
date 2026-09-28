@@ -88,10 +88,6 @@ export const AddTaskModal: React.FC<AddTaskModalProps> = ({
         isDone: false,
       });
     } else if (selectedTask === 'dcttp') {
-      if (!hoTen.trim()) {
-        setError('Vui lòng nhập tên Tổ dân phố / Khu vực');
-        return;
-      }
       const targetCount = parseInt(info1, 10) || 50;
       onAddTask('dcttp', {
         hoTen: toDanPho.trim(),
