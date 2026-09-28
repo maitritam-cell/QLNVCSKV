@@ -59,7 +59,7 @@ export function getResidentialGroups(): ResidentialGroup[] {
       return DEFAULT_RESIDENTIAL_GROUPS;
     }
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) && parsed.length > 0 ? parsed : DEFAULT_RESIDENTIAL_GROUPS;
+    return Array.isArray(parsed) ? parsed : DEFAULT_RESIDENTIAL_GROUPS;
   } catch {
     return DEFAULT_RESIDENTIAL_GROUPS;
   }
@@ -81,12 +81,73 @@ export function addResidentialGroup(data: Omit<ResidentialGroup, 'id'>): Residen
   return newGroup;
 }
 
+function normalizeResidentialGroupName(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/tổ\\s*dân\\s*phố/gi, 'tổ')
+    .replace(/\\s+/g, ' ');
+}
+
+function isSameResidentialGroupName(a: string, b: string): boolean {
+  return normalizeResidentialGroupName(a) === normalizeResidentialGroupName(b);
+}
+
+/**
+ * Update staff assignments and existing task records when an administrator
+ * changes the name of a Tổ dân phố.
+ */
+function renameResidentialGroupReferences(oldName: string, newName: string): void {
+  const updateAreaName = (value: string): string =>
+    value && isSameResidentialGroupName(value, oldName) ? newName : value;
+
+  const staffList = getStaffList();
+  const updatedStaff = staffList.map((staff) => ({
+    ...staff,
+    assignedAreas: (staff.assignedAreas || []).map(updateAreaName)
+  }));
+  saveStaffList(updatedStaff);
+  syncStaffToAccounts(updatedStaff);
+
+  saveHkcchList(getHkcchList().map((item) => ({
+    ...item,
+    toDanPho: updateAreaName(item.toDanPho)
+  })));
+
+  saveMatuyList(getMatuyList().map((item) => ({
+    ...item,
+    toDanPho: updateAreaName(item.toDanPho)
+  })));
+
+  saveDcttpList(getDcttpList().map((item) => ({
+    ...item,
+    toDanPho: updateAreaName(item.toDanPho)
+  })));
+
+  saveDatdaiList(getDatdaiList().map((item) => ({
+    ...item,
+    toDanPho: updateAreaName(item.toDanPho)
+  })));
+
+  saveGenericTasksList(getGenericTasksList().map((item) => ({
+    ...item,
+    toDanPho: updateAreaName(item.toDanPho)
+  })));
+}
+
 export function updateResidentialGroup(group: ResidentialGroup): boolean {
   const list = getResidentialGroups();
   const idx = list.findIndex((g) => g.id === group.id);
   if (idx === -1) return false;
+
+  const oldGroup = list[idx];
   list[idx] = { ...group };
   saveResidentialGroups(list);
+
+  if (oldGroup.name !== group.name) {
+    renameResidentialGroupReferences(oldGroup.name, group.name);
+  }
+
   return true;
 }
 
@@ -96,14 +157,18 @@ export function deleteResidentialGroup(id: string): void {
   const filtered = list.filter((g) => g.id !== id);
   saveResidentialGroups(filtered);
 
-  // Also remove from any staff's assignedAreas
+  // Remove the deleted Tổ dân phố from staff area assignments.
+  // Existing task records remain untouched to preserve historical data.
   if (group) {
     const staffList = getStaffList();
-    const updatedStaff = staffList.map((s) => ({
-      ...s,
-      assignedAreas: (s.assignedAreas || []).filter((a) => a !== group.name && a !== `Tổ ${group.name}`)
+    const updatedStaff = staffList.map((staff) => ({
+      ...staff,
+      assignedAreas: (staff.assignedAreas || []).filter(
+        (area) => !isSameResidentialGroupName(area, group.name)
+      )
     }));
     saveStaffList(updatedStaff);
+    syncStaffToAccounts(updatedStaff);
   }
 }
 
