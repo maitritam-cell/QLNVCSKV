@@ -38,6 +38,7 @@ interface StaffManagementViewProps {
   matuyList: MaTuyRecord[];
   dcttpList: DCTTPRecord[];
   datdaiList: DatDaiRecord[];
+  genericTasksList?: any[];
   onAddStaff: (staff: Staff) => void;
   onUpdateStaff: (staff: Staff) => void;
   onDeleteStaff: (id: string) => void;
@@ -55,6 +56,7 @@ export const StaffManagementView: React.FC<StaffManagementViewProps> = ({
   matuyList,
   dcttpList,
   datdaiList,
+  genericTasksList = [],
   onAddStaff,
   onUpdateStaff,
   onDeleteStaff,
@@ -252,41 +254,61 @@ export const StaffManagementView: React.FC<StaffManagementViewProps> = ({
     }
   };
 
-  // Compute stats for each staff member
+  // Compute stats dynamically for each task category currently enabled.
   const getStaffStats = (staffId: string) => {
-    const hkRecords = hkcchList.filter((r) => r.canBoId === staffId);
-    const hkDone = hkRecords.filter((r) => r.isDone).length;
-    const hkTotal = hkRecords.length;
+    const statsByTask: Record<string, { done: number; total: number }> = {};
 
-    const mtRecords = matuyList.filter((r) => r.canBoId === staffId);
-    const mtDone = mtRecords.filter((r) => r.isDone).length;
-    const mtTotal = mtRecords.length;
+    getTaskCategories().forEach((cat) => {
+      if (cat.id === 'hkcch') {
+        const records = hkcchList.filter((r) => r.canBoId === staffId);
+        statsByTask[cat.id] = {
+          done: records.filter((r) => r.isDone).length,
+          total: records.length
+        };
+      } else if (cat.id === 'matuy') {
+        const records = matuyList.filter((r) => r.canBoId === staffId);
+        statsByTask[cat.id] = {
+          done: records.filter((r) => r.isDone || (r.ketQuaTest && r.ketQuaTest !== 'Chưa test')).length,
+          total: records.length
+        };
+      } else if (cat.id === 'dcttp') {
+        const records = dcttpList.filter((r) => r.canBoId === staffId);
+        const done = records.reduce((sum, r) => sum + (Number(r.soLuongDaDieuChinh) || 0), 0);
+        const total = records.reduce((sum, r) => sum + (Number(r.tongNhanKhau) || 0), 0);
+        statsByTask[cat.id] = { done, total };
+      } else if (cat.id === 'datdai') {
+        const records = datdaiList.filter((r) => r.canBoId === staffId);
+        statsByTask[cat.id] = {
+          done: records.filter((r) => r.isDone).length,
+          total: records.length
+        };
+      } else {
+        const records = (genericTasksList || []).filter(
+          (r) => r.taskType === cat.id && r.canBoId === staffId
+        );
+        statsByTask[cat.id] = {
+          done: records.filter((r) => r.isDone).length,
+          total: records.length
+        };
+      }
+    });
 
-    const dcRecords = dcttpList.filter((r) => r.canBoId === staffId);
-    const dcDone = dcRecords.reduce((sum, r) => sum + (Number(r.soLuongDaDieuChinh) || 0), 0);
-    const dcTotal = dcRecords.reduce((sum, r) => sum + (Number(r.tongNhanKhau) || 0), 0);
-
-    const ddRecords = datdaiList.filter((r) => r.canBoId === staffId);
-    const ddDone = ddRecords.filter((r) => r.isDone).length;
-    const ddTotal = ddRecords.length;
-
-    const totalAssignedItems = hkTotal + mtTotal + dcRecords.length + ddTotal;
-    const totalDoneItems = hkDone + mtDone + (dcTotal > 0 && dcDone >= dcTotal ? dcRecords.length : 0) + ddDone;
-    const overallPercent =
-      totalAssignedItems > 0 ? Math.round((totalDoneItems / totalAssignedItems) * 100) : 0;
+    const totalAssignedItems = Object.values(statsByTask).reduce((sum, stat) => {
+      // For DCTTP use number of assigned records in the overall card counter,
+      // matching the previous UI behavior.
+      return sum + stat.total;
+    }, 0);
+    const totalDoneItems = Object.values(statsByTask).reduce(
+      (sum, stat) => sum + (stat.total > 0 && stat.done >= stat.total ? 1 : 0),
+      0
+    );
 
     return {
-      hkDone,
-      hkTotal,
-      mtDone,
-      mtTotal,
-      dcDone,
-      dcTotal,
-      ddDone,
-      ddTotal,
+      byTask: statsByTask,
       totalAssignedItems,
       totalDoneItems,
-      overallPercent
+      overallPercent:
+        totalAssignedItems > 0 ? Math.round((totalDoneItems / totalAssignedItems) * 100) : 0
     };
   };
 
@@ -523,65 +545,53 @@ export const StaffManagementView: React.FC<StaffManagementViewProps> = ({
                   </div>
 
                   <div className="grid grid-cols-2 gap-1.5 text-xs">
-                    {/* HKCCH */}
-                    <button
-                      type="button"
-                      onClick={() => onNavigateToTaskView('hkcch', staff.id)}
-                      className="p-2 rounded-xl bg-blue-50/60 hover:bg-blue-100/70 border border-blue-100 text-left transition flex items-center justify-between"
-                    >
-                      <div className="flex items-center gap-1.5">
-                        <Home className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                        <span className="font-semibold text-slate-700 text-[11px]">HKCCH</span>
-                      </div>
-                      <strong className="font-mono text-blue-800 text-xs">
-                        {stats.hkDone}/{stats.hkTotal}
-                      </strong>
-                    </button>
+                    {getTaskCategories().map((cat) => {
+                      const stat = stats.byTask[cat.id] || { done: 0, total: 0 };
+                      const isBuiltIn =
+                        cat.id === 'hkcch' ||
+                        cat.id === 'matuy' ||
+                        cat.id === 'dcttp' ||
+                        cat.id === 'datdai';
+                      const icon =
+                        cat.id === 'hkcch' ? (
+                          <Home className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                        ) : cat.id === 'matuy' ? (
+                          <Activity className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                        ) : cat.id === 'dcttp' ? (
+                          <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                        ) : cat.id === 'datdai' ? (
+                          <FileCheck className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+                        ) : (
+                          <ClipboardList className="w-3.5 h-3.5 text-slate-600 shrink-0" />
+                        );
+                      const tone =
+                        cat.id === 'hkcch'
+                          ? 'bg-blue-50/60 hover:bg-blue-100/70 border-blue-100 text-blue-800'
+                          : cat.id === 'matuy'
+                          ? 'bg-amber-50/60 hover:bg-amber-100/70 border-amber-100 text-amber-800'
+                          : cat.id === 'dcttp'
+                          ? 'bg-emerald-50/60 hover:bg-emerald-100/70 border-emerald-100 text-emerald-800'
+                          : cat.id === 'datdai'
+                          ? 'bg-purple-50/60 hover:bg-purple-100/70 border-purple-100 text-purple-800'
+                          : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-800';
 
-                    {/* Ma tuy */}
-                    <button
-                      type="button"
-                      onClick={() => onNavigateToTaskView('matuy', staff.id)}
-                      className="p-2 rounded-xl bg-amber-50/60 hover:bg-amber-100/70 border border-amber-100 text-left transition flex items-center justify-between"
-                    >
-                      <div className="flex items-center gap-1.5">
-                        <Activity className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                        <span className="font-semibold text-slate-700 text-[11px]">Ma túy</span>
-                      </div>
-                      <strong className="font-mono text-amber-800 text-xs">
-                        {stats.mtDone}/{stats.mtTotal}
-                      </strong>
-                    </button>
-
-                    {/* DCTTP */}
-                    <button
-                      type="button"
-                      onClick={() => onNavigateToTaskView('dcttp', staff.id)}
-                      className="p-2 rounded-xl bg-emerald-50/60 hover:bg-emerald-100/70 border border-emerald-100 text-left transition flex items-center justify-between"
-                    >
-                      <div className="flex items-center gap-1.5">
-                        <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                        <span className="font-semibold text-slate-700 text-[11px]">ĐCTTP</span>
-                      </div>
-                      <strong className="font-mono text-emerald-800 text-xs">
-                        {stats.dcDone}/{stats.dcTotal}
-                      </strong>
-                    </button>
-
-                    {/* Dat dai */}
-                    <button
-                      type="button"
-                      onClick={() => onNavigateToTaskView('datdai', staff.id)}
-                      className="p-2 rounded-xl bg-purple-50/60 hover:bg-purple-100/70 border border-purple-100 text-left transition flex items-center justify-between"
-                    >
-                      <div className="flex items-center gap-1.5">
-                        <FileCheck className="w-3.5 h-3.5 text-purple-600 shrink-0" />
-                        <span className="font-semibold text-slate-700 text-[11px]">Đất đai</span>
-                      </div>
-                      <strong className="font-mono text-purple-800 text-xs">
-                        {stats.ddDone}/{stats.ddTotal}
-                      </strong>
-                    </button>
+                      return (
+                        <button
+                          key={cat.id}
+                          type="button"
+                          onClick={() => onNavigateToTaskView(cat.id, staff.id)}
+                          className={`p-2 rounded-xl ${tone} text-left transition flex items-center justify-between`}
+                        >
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            {icon}
+                            <span className="font-semibold text-slate-700 text-[11px] truncate">
+                              {cat.shortTitle}
+                            </span>
+                          </div>
+                          <strong className="font-mono text-xs shrink-0">{stat.done}/{stat.total}</strong>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
@@ -1158,7 +1168,11 @@ export const StaffManagementView: React.FC<StaffManagementViewProps> = ({
                   <option value="hkcch">1. Hộ không có chủ hộ (HKCCH)</option>
                   <option value="matuy">2. Test đối tượng ma túy</option>
                   <option value="dcttp">3. Điều chỉnh Tổ dân phố (ĐCTTP)</option>
-                  <option value="datdai">4. Làm sạch dữ liệu đất đai (Lần 4)</option>
+                  {getTaskCategories().map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.title}
+                    </option>
+                  ))}
                 </select>
               </div>
 
