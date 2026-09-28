@@ -66,6 +66,7 @@ export const StaffManagementView: React.FC<StaffManagementViewProps> = ({
   onOpenExcelModal
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
+  const residentialGroups = getResidentialGroups();
 
   // Modals state
   const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
@@ -87,7 +88,7 @@ export const StaffManagementView: React.FC<StaffManagementViewProps> = ({
   // Form states for Assign Task Modal
   const [assignTaskType, setAssignTaskType] = useState<TaskType>('hkcch');
   const [assignStaffId, setAssignStaffId] = useState<string>('');
-  const [assignArea, setAssignArea] = useState('Tổ 1');
+  const [assignArea, setAssignArea] = useState<string>(residentialGroups[0]?.name || '');
   const [assignName, setAssignName] = useState('');
   const [assignInfo1, setAssignInfo1] = useState('');
   const [assignCmnd, setAssignCmnd] = useState('');
@@ -178,7 +179,7 @@ export const StaffManagementView: React.FC<StaffManagementViewProps> = ({
     setAssignTargetStaffId(staffId);
     setAssignStaffId(staffId);
     const staff = staffList.find((s) => s.id === staffId);
-    setAssignArea(staff?.assignedAreas[0] || 'Tổ 1');
+    setAssignArea(staff?.assignedAreas?.[0] || residentialGroups[0]?.name || '');
     setAssignName('');
     setAssignInfo1('');
     setAssignCmnd('');
@@ -193,6 +194,11 @@ export const StaffManagementView: React.FC<StaffManagementViewProps> = ({
     e.preventDefault();
     if (!assignName.trim() && assignTaskType !== 'datdai') {
       alert('Vui lòng nhập họ tên đối tượng / đại diện!');
+      return;
+    }
+
+    if (!assignArea.trim()) {
+      alert('Vui lòng chọn Tổ dân phố từ danh sách quản lý!');
       return;
     }
 
@@ -844,7 +850,7 @@ export const StaffManagementView: React.FC<StaffManagementViewProps> = ({
                     onChange={(e) => {
                       setAssignStaffId(e.target.value);
                       const st = staffList.find((s) => s.id === e.target.value);
-                      if (st && st.assignedAreas[0]) setAssignArea(st.assignedAreas[0]);
+                      setAssignArea(st?.assignedAreas?.[0] || residentialGroups[0]?.name || '');
                     }}
                     className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 font-bold"
                   >
@@ -858,14 +864,25 @@ export const StaffManagementView: React.FC<StaffManagementViewProps> = ({
 
                 <div>
                   <label className="font-bold text-slate-700 block mb-1">Địa bàn / Tổ dân phố:</label>
-                  <input
-                    type="text"
+                  <select
+                    id="select-assign-residential-group"
                     value={assignArea}
                     onChange={(e) => setAssignArea(e.target.value)}
-                    placeholder="VD: Tổ 1"
-                    className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 font-medium"
+                    className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 font-bold"
                     required
-                  />
+                  >
+                    <option value="">-- Chọn Tổ dân phố --</option>
+                    {residentialGroups.map((group) => (
+                      <option key={group.id} value={group.name}>
+                        {group.name}{group.code ? ` (${group.code})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                  {residentialGroups.length === 0 && (
+                    <p className="mt-1 text-[11px] text-red-600 font-semibold">
+                      Chưa có Tổ dân phố. Quản trị viên cần tạo danh sách trước khi giao nhiệm vụ.
+                    </p>
+                  )}
                 </div>
               </div>
 
