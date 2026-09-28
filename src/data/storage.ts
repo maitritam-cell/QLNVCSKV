@@ -385,7 +385,7 @@ export function getTaskCategories(): TaskCategoryConfig[] {
       return DEFAULT_TASK_CATEGORIES;
     }
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) && parsed.length > 0 ? parsed : DEFAULT_TASK_CATEGORIES;
+    return Array.isArray(parsed) ? parsed : DEFAULT_TASK_CATEGORIES;
   } catch {
     return DEFAULT_TASK_CATEGORIES;
   }
@@ -413,7 +413,17 @@ export function deleteTaskCategory(id: string): void {
   const filtered = current.filter((c) => c.id !== id);
   saveTaskCategories(filtered);
 
-  // If generic tasks exist for this category, remove them
+  // Remove records belonging to the deleted category, including built-in categories.
+  if (id === 'hkcch') {
+    saveHkcchList([]);
+  } else if (id === 'matuy') {
+    saveMatuyList([]);
+  } else if (id === 'dcttp') {
+    saveDcttpList([]);
+  } else if (id === 'datdai') {
+    saveDatdaiList([]);
+  }
+
   const genericList = getGenericTasksList();
   const remaining = genericList.filter((item) => item.taskType !== id);
   saveGenericTasksList(remaining);
