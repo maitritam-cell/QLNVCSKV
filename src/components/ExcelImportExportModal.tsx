@@ -173,7 +173,21 @@ export const ExcelImportExportModal: React.FC<ExcelImportExportModalProps> = ({
           const hoTen = nameIdx !== -1 ? String(row[nameIdx] || '').trim() : String(row[1] || '').trim();
           if (!hoTen) continue;
 
-          const toDanPho = toIdx !== -1 ? String(row[toIdx] || 'Tổ 1').trim() : 'Tổ 1';
+          const toDanPho = toIdx !== -1 ? String(row[toIdx] || '').trim() : '';
+
+          if (!toDanPho) {
+            continue;
+          }
+
+          const matchedGroup = residentialGroups.find((group) => {
+            const a = group.name.trim().toLowerCase().replace(/tổ\s*dân\s*phố\s*/i, 'tổ ').replace(/\s+/g, ' ');
+            const b = toDanPho.toLowerCase().replace(/tổ\s*dân\s*phố\s*/i, 'tổ ').replace(/\s+/g, ' ');
+            return a === b;
+          });
+
+          if (!matchedGroup) {
+            continue;
+          }
           const soHoSo = docIdx !== -1 ? String(row[docIdx] || '').trim() : '';
           const namSinh = dobIdx !== -1 ? String(row[dobIdx] || '1990').trim() : '1990';
           const diaChi = addrIdx !== -1 ? String(row[addrIdx] || '').trim() : '';
@@ -186,7 +200,7 @@ export const ExcelImportExportModal: React.FC<ExcelImportExportModalProps> = ({
           }
 
           // AUTO CLASSIFY RESPONSIBLE OFFICER FROM TỔ DÂN PHỐ
-          const assignedOfficer = findOfficerForResidentialGroup(toDanPho);
+          const assignedOfficer = findOfficerForResidentialGroup(matchedGroup.name);
 
           parsed.push({
             stt: parsed.length + 1,
