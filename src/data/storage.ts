@@ -85,8 +85,8 @@ function normalizeResidentialGroupName(value: string): string {
   return value
     .trim()
     .toLowerCase()
-    .replace(/tổ\\s*dân\\s*phố/gi, 'tổ')
-    .replace(/\\s+/g, ' ');
+    .replace(/tổ\s*dân\s*phố/gi, 'tổ')
+    .replace(/s+/g, ' ');
 }
 
 function isSameResidentialGroupName(a: string, b: string): boolean {
