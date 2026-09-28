@@ -599,6 +599,7 @@ export function App() {
             matuyList={matuyList}
             dcttpList={dcttpList}
             datdaiList={datdaiList}
+            genericTasksList={genericTasksList}
             onAddStaff={handleAddStaff}
             onUpdateStaff={handleUpdateStaff}
             onDeleteStaff={handleDeleteStaff}
