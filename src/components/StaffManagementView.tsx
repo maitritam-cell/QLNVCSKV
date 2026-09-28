@@ -256,31 +256,34 @@ export const StaffManagementView: React.FC<StaffManagementViewProps> = ({
 
   // Compute stats dynamically for each task category currently enabled.
   const getStaffStats = (staffId: string) => {
-    const statsByTask: Record<string, { done: number; total: number }> = {};
+    const statsByTask: Record<string, { done: number; total: number; assignedCount: number }> = {};
 
     getTaskCategories().forEach((cat) => {
       if (cat.id === 'hkcch') {
         const records = hkcchList.filter((r) => r.canBoId === staffId);
         statsByTask[cat.id] = {
           done: records.filter((r) => r.isDone).length,
-          total: records.length
+          total: records.length,
+          assignedCount: records.length
         };
       } else if (cat.id === 'matuy') {
         const records = matuyList.filter((r) => r.canBoId === staffId);
         statsByTask[cat.id] = {
           done: records.filter((r) => r.isDone || (r.ketQuaTest && r.ketQuaTest !== 'Chưa test')).length,
-          total: records.length
+          total: records.length,
+          assignedCount: records.length
         };
       } else if (cat.id === 'dcttp') {
         const records = dcttpList.filter((r) => r.canBoId === staffId);
         const done = records.reduce((sum, r) => sum + (Number(r.soLuongDaDieuChinh) || 0), 0);
         const total = records.reduce((sum, r) => sum + (Number(r.tongNhanKhau) || 0), 0);
-        statsByTask[cat.id] = { done, total };
+        statsByTask[cat.id] = { done, total, assignedCount: records.length };
       } else if (cat.id === 'datdai') {
         const records = datdaiList.filter((r) => r.canBoId === staffId);
         statsByTask[cat.id] = {
           done: records.filter((r) => r.isDone).length,
-          total: records.length
+          total: records.length,
+          assignedCount: records.length
         };
       } else {
         const records = (genericTasksList || []).filter(
@@ -288,16 +291,16 @@ export const StaffManagementView: React.FC<StaffManagementViewProps> = ({
         );
         statsByTask[cat.id] = {
           done: records.filter((r) => r.isDone).length,
-          total: records.length
+          total: records.length,
+          assignedCount: records.length
         };
       }
     });
 
-    const totalAssignedItems = Object.values(statsByTask).reduce((sum, stat) => {
-      // For DCTTP use number of assigned records in the overall card counter,
-      // matching the previous UI behavior.
-      return sum + stat.total;
-    }, 0);
+    const totalAssignedItems = Object.values(statsByTask).reduce(
+      (sum, stat) => sum + stat.assignedCount,
+      0
+    );
     const totalDoneItems = Object.values(statsByTask).reduce(
       (sum, stat) => sum + (stat.total > 0 && stat.done >= stat.total ? 1 : 0),
       0
@@ -546,7 +549,7 @@ export const StaffManagementView: React.FC<StaffManagementViewProps> = ({
 
                   <div className="grid grid-cols-2 gap-1.5 text-xs">
                     {getTaskCategories().map((cat) => {
-                      const stat = stats.byTask[cat.id] || { done: 0, total: 0 };
+                      const stat = stats.byTask[cat.id] || { done: 0, total: 0, assignedCount: 0 };
                       const isBuiltIn =
                         cat.id === 'hkcch' ||
                         cat.id === 'matuy' ||
