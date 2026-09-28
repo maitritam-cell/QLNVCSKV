@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { X, PlusCircle, AlertCircle } from 'lucide-react';
 import { TaskType, Staff } from '../types';
-import { TASK_CONFIG, getTaskCategories } from '../data/storage';
+import { TASK_CONFIG, getTaskCategories, getResidentialGroups } from '../data/storage';
 
 interface AddTaskModalProps {
   isOpen: boolean;
@@ -20,8 +20,11 @@ export const AddTaskModal: React.FC<AddTaskModalProps> = ({
 }) => {
   const [selectedTask, setSelectedTask] = useState<TaskType>(currentTaskType);
   const [selectedStaffId, setSelectedStaffId] = useState<string>(staffList[0]?.id || '');
+  const residentialGroups = getResidentialGroups();
+  const residentialGroupSignature = residentialGroups.map((g) => `${g.id}:${g.name}`).join('|');
+
   const [hoTen, setHoTen] = useState('');
-  const [toDanPho, setToDanPho] = useState('');
+  const [toDanPho, setToDanPho] = useState<string>(residentialGroups[0]?.name || '');
   const [info1, setInfo1] = useState('');
   const [error, setError] = useState<string | null>(null);
 
@@ -32,6 +35,15 @@ export const AddTaskModal: React.FC<AddTaskModalProps> = ({
 
   const categories = getTaskCategories();
 
+  useEffect(() => {
+    if (!isOpen) return;
+    setToDanPho((current) =>
+      residentialGroups.some((g) => g.name === current)
+        ? current
+        : (residentialGroups[0]?.name || '')
+    );
+  }, [isOpen, residentialGroupSignature]);
+
   if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -41,6 +53,11 @@ export const AddTaskModal: React.FC<AddTaskModalProps> = ({
     const selectedStaff = staffList.find((s) => s.id === selectedStaffId);
     const staffName = selectedStaff ? selectedStaff.name : 'Cán bộ phụ trách';
 
+    if (!toDanPho.trim()) {
+      setError('Vui lòng chọn Tổ dân phố từ danh sách quản lý');
+      return;
+    }
+
     if (selectedTask === 'hkcch') {
       if (!hoTen.trim()) {
         setError('Vui lòng nhập họ và tên chủ hộ');
@@ -49,7 +66,7 @@ export const AddTaskModal: React.FC<AddTaskModalProps> = ({
       onAddTask('hkcch', {
         hoTen: hoTen.trim(),
         info1: info1.trim() || `HS-${Date.now().toString().slice(-4)}`,
-        toDanPho: toDanPho.trim() || 'Tổ dân phố 1',
+        toDanPho: toDanPho.trim(),
         staffId: selectedStaffId,
         staffName,
         isDone: false,
@@ -65,7 +82,7 @@ export const AddTaskModal: React.FC<AddTaskModalProps> = ({
         namSinh: namSinh.trim() || '1995',
         cmnd: cmnd.trim() || '',
         info1: info1.trim() || 'Diện quản lý theo dõi',
-        toDanPho: toDanPho.trim() || 'Tổ dân phố 1',
+        toDanPho: toDanPho.trim(),
         staffId: selectedStaffId,
         staffName,
         isDone: false,
@@ -77,9 +94,9 @@ export const AddTaskModal: React.FC<AddTaskModalProps> = ({
       }
       const targetCount = parseInt(info1, 10) || 50;
       onAddTask('dcttp', {
-        hoTen: hoTen.trim(),
+        hoTen: toDanPho.trim(),
         info1: targetCount,
-        toDanPho: toDanPho.trim() || hoTen.trim(),
+        toDanPho: toDanPho.trim(),
         staffId: selectedStaffId,
         staffName,
         isDone: false,
@@ -94,7 +111,7 @@ export const AddTaskModal: React.FC<AddTaskModalProps> = ({
         cmnd: cmnd.trim() || '012345678',
         namSinh: namSinh.trim() || '1980',
         diaChi: diaChi.trim() || 'Tổ dân phố 1',
-        toDanPho: toDanPho.trim() || 'Tổ dân phố 1',
+        toDanPho: toDanPho.trim(),
         staffId: selectedStaffId,
         staffName,
         isDone: false,
@@ -108,7 +125,7 @@ export const AddTaskModal: React.FC<AddTaskModalProps> = ({
       onAddTask(selectedTask, {
         hoTen: hoTen.trim(),
         info1: info1.trim() || '',
-        toDanPho: toDanPho.trim() || 'Tổ dân phố 1',
+        toDanPho: toDanPho.trim(),
         staffId: selectedStaffId,
         staffName,
         isDone: false,
@@ -192,6 +209,32 @@ export const AddTaskModal: React.FC<AddTaskModalProps> = ({
             </select>
           </div>
 
+          {/* Tổ dân phố is selected from the administrator-managed master list */}
+          <div className="pt-1">
+            <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+              Tổ dân phố / Địa bàn:
+            </label>
+            <select
+              id="select-modal-residential-group"
+              required
+              value={toDanPho}
+              onChange={(e) => setToDanPho(e.target.value)}
+              className="w-full p-2.5 text-xs font-semibold bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-red-600 focus:outline-hidden"
+            >
+              <option value="">-- Chọn Tổ dân phố --</option>
+              {residentialGroups.map((group) => (
+                <option key={group.id} value={group.name}>
+                  {group.name}{group.code ? ` (${group.code})` : ''}
+                </option>
+              ))}
+            </select>
+            {residentialGroups.length === 0 && (
+              <p className="mt-1 text-[11px] text-red-600 font-semibold">
+                Chưa có Tổ dân phố. Quản trị viên cần tạo danh sách Tổ dân phố trước.
+              </p>
+            )}
+          </div>
+
           {/* Dynamic Inputs depending on task */}
           {selectedTask === 'hkcch' && (
             <div className="space-y-3 pt-2 border-t border-slate-100">
@@ -223,18 +266,6 @@ export const AddTaskModal: React.FC<AddTaskModalProps> = ({
                   />
                 </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Tổ dân phố:
-                  </label>
-                  <input
-                    type="text"
-                    value={toDanPho}
-                    onChange={(e) => setToDanPho(e.target.value)}
-                    placeholder="VD: Tổ dân phố 3"
-                    className="w-full p-2.5 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-hidden"
-                  />
-                </div>
               </div>
             </div>
           )}
@@ -297,38 +328,12 @@ export const AddTaskModal: React.FC<AddTaskModalProps> = ({
                   />
                 </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Tổ dân phố:
-                  </label>
-                  <input
-                    type="text"
-                    value={toDanPho}
-                    onChange={(e) => setToDanPho(e.target.value)}
-                    placeholder="VD: Tổ dân phố 5"
-                    className="w-full p-2.5 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:outline-hidden"
-                  />
-                </div>
               </div>
             </div>
           )}
 
           {selectedTask === 'dcttp' && (
             <div className="space-y-3 pt-2 border-t border-slate-100">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Tên Tổ dân phố / Khu vực:
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={hoTen}
-                  onChange={(e) => setHoTen(e.target.value)}
-                  placeholder="VD: Tổ dân phố 11 (Khu chung cư B2)"
-                  className="w-full p-2.5 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:outline-hidden"
-                />
-              </div>
-
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
                   Chỉ tiêu nhân khẩu cần điều chỉnh:
