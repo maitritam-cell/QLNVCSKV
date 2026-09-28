@@ -538,6 +538,11 @@ export function App() {
         onOpenChangePassword={() => setIsChangePasswordOpen(true)}
         onOpenLoginModal={() => setIsLoginModalOpen(true)}
         onOpenAccountManagement={() => setIsAccountModalOpen(true)}
+        onOpenResidentialGroupManagement={
+          currentUser?.role === 'admin'
+            ? () => setIsResidentialModalOpen(true)
+            : undefined
+        }
       />
 
       {/* Main Content Area */}
@@ -592,6 +597,11 @@ export function App() {
             onReassignTasks={handleReassignTasks}
             onNavigateToTaskView={handleSelectTaskAndStaff}
             onOpenAccountManagement={() => setIsAccountModalOpen(true)}
+            onOpenResidentialGroupModal={
+              currentUser?.role === 'admin'
+                ? () => setIsResidentialModalOpen(true)
+                : undefined
+            }
           />
         )}
       </main>
@@ -633,6 +643,14 @@ export function App() {
         onClose={() => setIsAccountModalOpen(false)}
         onAccountsUpdated={loadAllData}
         currentUserId={currentUser?.id}
+      />
+
+      {/* Residential Group Management Modal (Admin only) */}
+      <ResidentialGroupModal
+        isOpen={isResidentialModalOpen && currentUser?.role === 'admin'}
+        onClose={() => setIsResidentialModalOpen(false)}
+        staffList={staffList}
+        onDataUpdated={loadAllData}
       />
 
       {/* In-App Delete Task Confirmation Modal */}
