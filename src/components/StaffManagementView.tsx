@@ -550,11 +550,6 @@ export const StaffManagementView: React.FC<StaffManagementViewProps> = ({
                   <div className="grid grid-cols-2 gap-1.5 text-xs">
                     {getTaskCategories().map((cat) => {
                       const stat = stats.byTask[cat.id] || { done: 0, total: 0, assignedCount: 0 };
-                      const isBuiltIn =
-                        cat.id === 'hkcch' ||
-                        cat.id === 'matuy' ||
-                        cat.id === 'dcttp' ||
-                        cat.id === 'datdai';
                       const icon =
                         cat.id === 'hkcch' ? (
                           <Home className="w-3.5 h-3.5 text-blue-600 shrink-0" />
