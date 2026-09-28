@@ -117,6 +117,14 @@ export function App() {
     loadAllData();
   }, [loadAllData]);
 
+  const handleCategoriesUpdated = () => {
+    const categories = getTaskCategories();
+    if (categories.length > 0 && !categories.some((cat) => cat.id === currentTask)) {
+      setCurrentTask(categories[0].id);
+    }
+    loadAllData();
+  };
+
   // Auth handlers
   const handleLoginSuccess = (user: UserAccount) => {
     setCurrentUserState(user);
@@ -640,7 +648,7 @@ export function App() {
       <ManageTaskCategoriesModal
         isOpen={isManageCategoriesOpen}
         onClose={() => setIsManageCategoriesOpen(false)}
-        onCategoriesUpdated={loadAllData}
+        onCategoriesUpdated={handleCategoriesUpdated}
       />
 
       {currentUser && (
