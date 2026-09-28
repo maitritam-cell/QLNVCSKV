@@ -11,7 +11,8 @@ import {
   User,
   ChevronDown,
   ShieldAlert,
-  ArrowRightLeft
+  ArrowRightLeft,
+  Building
 } from 'lucide-react';
 import { UserAccount } from '../types';
 
@@ -26,6 +27,7 @@ interface NavbarProps {
   onOpenChangePassword: () => void;
   onOpenLoginModal: () => void;
   onOpenAccountManagement?: () => void;
+  onOpenResidentialGroupManagement?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -38,7 +40,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onLogout,
   onOpenChangePassword,
   onOpenLoginModal,
-  onOpenAccountManagement
+  onOpenAccountManagement,
+  onOpenResidentialGroupManagement
 }) => {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -228,6 +231,21 @@ export const Navbar: React.FC<NavbarProps> = ({
                         >
                           <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
                           <span>Quản Lý Tài Khoản & Phân Quyền</span>
+                        </button>
+                      )}
+
+                      {currentUser.role === 'admin' && onOpenResidentialGroupManagement && (
+                        <button
+                          type="button"
+                          id="btn-nav-manage-residential-groups"
+                          onClick={() => {
+                            setIsUserMenuOpen(false);
+                            onOpenResidentialGroupManagement();
+                          }}
+                          className="w-full text-left px-3 py-2 text-xs text-blue-300 hover:text-blue-200 hover:bg-slate-800 rounded-xl flex items-center gap-2 transition font-semibold"
+                        >
+                          <Building className="w-3.5 h-3.5 text-blue-400" />
+                          <span>Quản Lý Tổ Dân Phố</span>
                         </button>
                       )}
 
