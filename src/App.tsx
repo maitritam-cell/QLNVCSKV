@@ -569,6 +569,7 @@ export function App() {
             onDeleteRecord={handleDeleteRecord}
             onOpenAddModal={() => setIsAddModalOpen(true)}
             onOpenManageCategories={() => setIsManageCategoriesOpen(true)}
+            onOpenExcelModal={() => setIsExcelModalOpen(true)}
           />
         )}
 
@@ -602,6 +603,7 @@ export function App() {
                 ? () => setIsResidentialModalOpen(true)
                 : undefined
             }
+            onOpenExcelModal={() => setIsExcelModalOpen(true)}
           />
         )}
       </main>
@@ -618,6 +620,19 @@ export function App() {
       <DataManagementModal
         isOpen={isDataModalOpen}
         onClose={() => setIsDataModalOpen(false)}
+        onDataChanged={loadAllData}
+        onOpenExcelModal={() => setIsExcelModalOpen(true)}
+        onOpenResidentialModal={
+          currentUser?.role === 'admin'
+            ? () => setIsResidentialModalOpen(true)
+            : undefined
+        }
+      />
+
+      <ExcelImportExportModal
+        isOpen={isExcelModalOpen}
+        onClose={() => setIsExcelModalOpen(false)}
+        staffList={staffList}
         onDataChanged={loadAllData}
       />
 
