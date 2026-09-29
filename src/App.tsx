@@ -49,6 +49,7 @@ import { DataManagementModal } from './components/DataManagementModal';
 import { LoginView } from './components/LoginView';
 import { ChangePasswordModal } from './components/ChangePasswordModal';
 import { AccountManagementModal } from './components/AccountManagementModal';
+import { CloudAccountManagementModal } from './components/CloudAccountManagementModal';
 import { ManageTaskCategoriesModal } from './components/ManageTaskCategoriesModal';
 import { ResidentialGroupModal } from './components/ResidentialGroupModal';
 import { ExcelImportExportModal } from './components/ExcelImportExportModal';
@@ -769,11 +770,20 @@ export function App() {
         />
       )}
 
-      {/* Account Management Modal (Admin only) */}
-      <AccountManagementModal
-        isOpen={isAccountModalOpen}
+      {/* Legacy account modal retained for backward compatibility; Cloud mode uses the central modal below. */}
+      {!isCloudReady() && (
+        <AccountManagementModal
+          isOpen={isAccountModalOpen}
+          onClose={() => setIsAccountModalOpen(false)}
+          onAccountsUpdated={loadAllData}
+          currentUserId={currentUser?.id}
+        />
+      )}
+
+      <CloudAccountManagementModal
+        isOpen={isAccountModalOpen && isCloudReady() && currentUser?.role === 'admin'}
         onClose={() => setIsAccountModalOpen(false)}
-        onAccountsUpdated={loadAllData}
+        onAccountsUpdated={() => void loadAllData()}
         currentUserId={currentUser?.id}
       />
 
