@@ -617,6 +617,7 @@ export function App() {
                 : undefined
             }
             onOpenExcelModal={() => setIsExcelModalOpen(true)}
+            onOpenInformationLibrary={() => setIsInformationLibraryOpen(true)}
           />
         )}
       </main>
