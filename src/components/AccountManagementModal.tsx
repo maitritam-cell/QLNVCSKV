@@ -1,5 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { UserAccount, UserRole } from '../types';
+import { isCloudReady, getStaffList } from '../data/storage';
+import { supabase } from '../lib/supabase';
+import { createCloudAccount, updateCloudAccount, deactivateCloudAccount, sendCloudPasswordReset } from '../services/cloudAuth';
 import {
   getUserAccounts,
   addCustomAccount,
@@ -50,14 +53,32 @@ export const AccountManagementModal: React.FC<AccountManagementModalProps> = ({
   const [phone, setPhone] = useState('');
   const [role, setRole] = useState<UserRole>('admin');
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [cloudMode, setCloudMode] = useState(false);
+  const [cloudStaffId, setCloudStaffId] = useState('');
 
   if (!isOpen) return null;
 
-  const refreshAccounts = () => {
-    const fresh = getUserAccounts();
-    setAccounts(fresh);
+  const refreshAccounts = async () => {
+    if (isCloudReady()) {
+      setCloudMode(true);
+      const { data, error } = await supabase.from('nv_profiles').select('*').order('role').order('full_name');
+      if (!error && data) {
+        setAccounts(data.map((row: any) => ({
+          id: row.id, username: row.username, email: row.email || undefined, password: '',
+          role: row.role, name: row.full_name, rank: row.rank, title: row.title, phone: row.phone,
+          staffId: row.staff_id || undefined, assignedAreas: row.assigned_areas || []
+        })));
+      }
+    } else {
+      setCloudMode(false);
+      setAccounts(getUserAccounts());
+    }
     if (onAccountsUpdated) onAccountsUpdated();
   };
+
+  useEffect(() => {
+    if (isOpen) void refreshAccounts();
+  }, [isOpen]);
 
   const handleOpenAdd = () => {
     setEditingAccount(null);
@@ -69,6 +90,7 @@ export const AccountManagementModal: React.FC<AccountManagementModalProps> = ({
     setTitle('Chỉ huy - Quản trị viên');
     setPhone('');
     setRole('admin');
+    setCloudStaffId('');
     setIsAddOpen(true);
   };
 
@@ -82,6 +104,7 @@ export const AccountManagementModal: React.FC<AccountManagementModalProps> = ({
     setTitle(acc.title || 'Quản trị viên');
     setPhone(acc.phone || '');
     setRole(acc.role);
+    setCloudStaffId(acc.staffId || '');
     setIsAddOpen(true);
   };
 
