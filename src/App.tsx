@@ -201,6 +201,9 @@ export function App() {
     setCurrentUser(user);
     setIsLoginModalOpen(false);
     setSelectedStaffId(user.staffId || '');
+    startCloudRealtime(() => {
+      applyCurrentDataToState();
+    });
     void loadAllData();
     showToast(`Đăng nhập thành công: ${user.rank} ${user.name} ✓`);
   };
@@ -208,6 +211,7 @@ export function App() {
   const handleLogout = () => {
     void signOutCloud();
     clearCloudCache();
+    void stopCloudRealtime();
     logoutUser();
     setCurrentUserState(null);
     setIsLoginModalOpen(false);
