@@ -416,10 +416,23 @@ export async function persistTaskList(taskType: string, list: any[]) {
   if (!cloudCache.ready) return;
   if (cloudCache.role !== 'admin') {
     const own = list.filter((r) => r.canBoId === cloudCache.staffId);
-    const { error } = await supabase
-      .from('nv_task_records')
-      .upsert(own.map((r) => recordToDb(taskType, r)), { onConflict: 'task_type,stt' });
-    if (error) console.error('Supabase officer task update failed', error);
+
+    for (const record of own) {
+      const { error } = await supabase
+        .from('nv_task_records')
+        .update(recordToDb(taskType, record))
+        .eq('task_type', taskType)
+        .eq('stt', record.stt)
+        .eq('assignee_id', cloudCache.staffId);
+
+      if (error) {
+        console.error('Supabase officer task update failed', {
+          taskType,
+          stt: record.stt,
+          error
+        });
+      }
+    }
     return;
   }
 
