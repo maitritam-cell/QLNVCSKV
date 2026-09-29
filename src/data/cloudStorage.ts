@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 import {
   Staff,
   TaskCategoryConfig,
@@ -28,6 +29,8 @@ export type CloudCache = {
   informationPosts: InformationPost[];
 };
 
+let realtimeChannel: RealtimeChannel | null = null;
+
 export const cloudCache: CloudCache = {
   ready: false,
   userId: null,
@@ -46,6 +49,34 @@ export const cloudCache: CloudCache = {
 
 export function isCloudReady(): boolean {
   return cloudCache.ready;
+}
+
+export function startCloudRealtime(onChanged: () => void): void {
+  if (!cloudCache.ready || realtimeChannel) return;
+
+  realtimeChannel = supabase
+    .channel('qlnvskv-db-changes')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'nv_task_categories' }, () => void refreshFromCloud(onChanged))
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'nv_staff' }, () => void refreshFromCloud(onChanged))
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'nv_residential_groups' }, () => void refreshFromCloud(onChanged))
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'nv_task_records' }, () => void refreshFromCloud(onChanged))
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'nv_information_posts' }, () => void refreshFromCloud(onChanged))
+    .subscribe((status) => {
+      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        console.warn('QLNVCSKV Realtime:', status);
+      }
+    });
+}
+
+async function refreshFromCloud(onChanged: () => void): Promise<void> {
+  const ok = await initializeCloudStorage();
+  if (ok) onChanged();
+}
+
+export async function stopCloudRealtime(): Promise<void> {
+  if (!realtimeChannel) return;
+  await supabase.removeChannel(realtimeChannel);
+  realtimeChannel = null;
 }
 
 function sessionClaims(session: any) {
