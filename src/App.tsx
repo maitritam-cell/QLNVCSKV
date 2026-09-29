@@ -48,6 +48,7 @@ import { AccountManagementModal } from './components/AccountManagementModal';
 import { ManageTaskCategoriesModal } from './components/ManageTaskCategoriesModal';
 import { ResidentialGroupModal } from './components/ResidentialGroupModal';
 import { ExcelImportExportModal } from './components/ExcelImportExportModal';
+import { InformationLibraryModal } from './components/InformationLibraryModal';
 import { ShieldCheck, Check, Trash2, AlertTriangle } from 'lucide-react';
 
 export function App() {
@@ -59,6 +60,7 @@ export function App() {
   const [isManageCategoriesOpen, setIsManageCategoriesOpen] = useState(false);
   const [isResidentialModalOpen, setIsResidentialModalOpen] = useState(false);
   const [isExcelModalOpen, setIsExcelModalOpen] = useState(false);
+  const [isInformationLibraryOpen, setIsInformationLibraryOpen] = useState(false);
 
   const [currentTab, setCurrentTab] = useState<'update' | 'dashboard' | 'staff'>('update');
   const [currentTask, setCurrentTask] = useState<TaskType>('hkcch');
@@ -546,6 +548,7 @@ export function App() {
         onOpenChangePassword={() => setIsChangePasswordOpen(true)}
         onOpenLoginModal={() => setIsLoginModalOpen(true)}
         onOpenAccountManagement={() => setIsAccountModalOpen(true)}
+        onOpenInformationLibrary={() => setIsInformationLibraryOpen(true)}
         onOpenResidentialGroupManagement={
           currentUser?.role === 'admin'
             ? () => setIsResidentialModalOpen(true)
@@ -578,6 +581,7 @@ export function App() {
             onOpenAddModal={() => setIsAddModalOpen(true)}
             onOpenManageCategories={() => setIsManageCategoriesOpen(true)}
             onOpenExcelModal={() => setIsExcelModalOpen(true)}
+            onOpenInformationLibrary={() => setIsInformationLibraryOpen(true)}
           />
         )}
 
@@ -636,6 +640,13 @@ export function App() {
             ? () => setIsResidentialModalOpen(true)
             : undefined
         }
+      />
+
+      <InformationLibraryModal
+        isOpen={isInformationLibraryOpen}
+        onClose={() => setIsInformationLibraryOpen(false)}
+        isAdmin={currentUser?.role === 'admin'}
+        currentUserName={currentUser ? `${currentUser.rank} ${currentUser.name}` : undefined}
       />
 
       <ExcelImportExportModal
