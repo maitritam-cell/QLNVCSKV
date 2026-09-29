@@ -34,12 +34,8 @@ import {
   deleteUserAccount,
   getGenericTasksList,
   saveGenericTasksList,
-  getTaskCategories,
-  initializeCloudStorage,
-  isCloudReady,
-  clearCloudCache
+  getTaskCategories
 } from './data/storage';
-import { startCloudRealtime, stopCloudRealtime } from './data/cloudStorage';
 import { Navbar } from './components/Navbar';
 import { TaskUpdateView } from './components/TaskUpdateView';
 import { DashboardView } from './components/DashboardView';
@@ -47,27 +43,34 @@ import { StaffManagementView } from './components/StaffManagementView';
 import { AddTaskModal } from './components/AddTaskModal';
 import { DataManagementModal } from './components/DataManagementModal';
 import { LoginView } from './components/LoginView';
-import { CloudChangePasswordModal } from './components/CloudChangePasswordModal';
-import { CloudAccountManagementModal } from './components/CloudAccountManagementModal';
+import { ChangePasswordModal } from './components/ChangePasswordModal';
+import { AccountManagementModal } from './components/AccountManagementModal';
 import { ManageTaskCategoriesModal } from './components/ManageTaskCategoriesModal';
 import { ResidentialGroupModal } from './components/ResidentialGroupModal';
 import { ExcelImportExportModal } from './components/ExcelImportExportModal';
-import { InformationLibraryModal } from './components/InformationLibraryModal';
-import { ShieldCheck, Check, Trash2, AlertTriangle } from 'lucide-react';
-import { supabase } from './lib/supabase';
-import { fetchCurrentProfile, getCloudSession, signOutCloud } from './services/cloudAuth';
+import {
+  initializeFirestoreSync,
+  subscribeSyncStatus,
+  uploadAllLocalDataToFirestore,
+  pullAllDataFromFirestore,
+  CloudSyncStatus,
+  getSyncStatus
+} from './services/firestoreSync';
+import { ShieldCheck, Check, Trash2, AlertTriangle, Cloud, RefreshCw, UploadCloud, Building } from 'lucide-react';
 
 export function App() {
   // Authentication & session state (Strict Login - No trial/guest mode)
-  const [currentUser, setCurrentUserState] = useState<UserAccount | null>(null);
-  const [authLoading, setAuthLoading] = useState(true);
+  const [currentUser, setCurrentUserState] = useState<UserAccount | null>(() => getCurrentUser());
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [isManageCategoriesOpen, setIsManageCategoriesOpen] = useState(false);
   const [isResidentialModalOpen, setIsResidentialModalOpen] = useState(false);
   const [isExcelModalOpen, setIsExcelModalOpen] = useState(false);
-  const [isInformationLibraryOpen, setIsInformationLibraryOpen] = useState(false);
+
+  // Cloud Database state
+  const [cloudStatus, setCloudStatus] = useState<CloudSyncStatus>(() => getSyncStatus());
+  const [isCloudBannerDismissed, setIsCloudBannerDismissed] = useState(false);
 
   const [currentTab, setCurrentTab] = useState<'update' | 'dashboard' | 'staff'>('update');
   const [currentTask, setCurrentTask] = useState<TaskType>('hkcch');
@@ -107,129 +110,67 @@ export function App() {
   };
 
   // Load all initial data from local storage
-  const applyCurrentDataToState = useCallback(() => {
-    const loadedStaff = getStaffList();
-    setStaffList(loadedStaff);
-    setHkcchList(getHkcchList());
-    setMatuyList(getMatuyList());
-    setDcttpList(getDcttpList());
-    setDatdaiList(getDatdaiList());
-    setGenericTasksList(getGenericTasksList());
-  }, []);
-
-  const loadAllData = useCallback(async () => {
+  const loadAllData = useCallback(() => {
     setIsRefreshing(true);
-    if (isCloudReady()) {
-      await initializeCloudStorage();
-    }
-
     const loadedStaff = getStaffList();
     setStaffList(loadedStaff);
-    if (!isCloudReady()) {
-      syncStaffToAccounts(loadedStaff);
-    }
+    syncStaffToAccounts(loadedStaff);
     setHkcchList(getHkcchList());
     setMatuyList(getMatuyList());
     setDcttpList(getDcttpList());
     setDatdaiList(getDatdaiList());
     setGenericTasksList(getGenericTasksList());
-    setTimeout(() => setIsRefreshing(false), 300);
+    setTimeout(() => {
+      setIsRefreshing(false);
+    }, 300);
   }, []);
 
+  // Initial load and Firestore live sync subscription
   useEffect(() => {
-    let mounted = true;
-
-    const bootstrapSession = async () => {
-      setAuthLoading(true);
-      const session = await getCloudSession();
-
-      if (session) {
-        const profile = await fetchCurrentProfile();
-        if (profile) {
-          setCurrentUserState(profile);
-          setCurrentUser(profile);
-          setSelectedStaffId(profile.staffId || '');
-          await initializeCloudStorage();
-          startCloudRealtime(() => {
-            if (mounted) applyCurrentDataToState();
-          });
-          if (mounted) {
-            const categories = getTaskCategories();
-            if (categories.length > 0 && !categories.some((cat) => cat.id === currentTask)) {
-              setCurrentTask(categories[0].id);
-            }
-          }
-          await loadAllData();
-        } else {
-          await signOutCloud();
-          clearCloudCache();
-          logoutUser();
-          if (mounted) setCurrentUserState(null);
-        }
-      }
-
-      if (mounted) setAuthLoading(false);
-    };
-
-    void bootstrapSession();
-
-    const { data: authSubscription } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session && mounted) {
-        clearCloudCache();
-        setCurrentUserState(null);
-        logoutUser();
-      }
-    });
-
-    return () => {
-      mounted = false;
-      authSubscription.subscription.unsubscribe();
-      void stopCloudRealtime();
-    };
-  }, [loadAllData, applyCurrentDataToState]);
-
-  const handleCategoriesUpdated = () => {
-    const categories = getTaskCategories();
-    if (categories.length > 0 && !categories.some((cat) => cat.id === currentTask)) {
-      setCurrentTask(categories[0].id);
-    }
     loadAllData();
+    const unsubscribeStatus = subscribeSyncStatus((st) => setCloudStatus(st));
+    initializeFirestoreSync(() => {
+      // Remote changes pushed from another client/tab
+      loadAllData();
+    });
+    return () => unsubscribeStatus();
+  }, [loadAllData]);
+
+  const handleForceCloudSync = async () => {
+    try {
+      showToast('Đang kéo dữ liệu mới nhất từ Cơ sở dữ liệu đám mây...');
+      await pullAllDataFromFirestore();
+      loadAllData();
+      showToast('Đã đồng bộ thành công với Cơ sở dữ liệu đám mây Firestore ✓');
+    } catch (e) {
+      showToast('Lỗi đồng bộ đám mây: ' + (e instanceof Error ? e.message : String(e)));
+    }
+  };
+
+  const handleUploadAllToCloud = async () => {
+    try {
+      showToast('Đang tải toàn bộ dữ liệu lên Cơ sở dữ liệu đám mây...');
+      await uploadAllLocalDataToFirestore();
+      loadAllData();
+      showToast('Đã lưu dữ liệu lên Cơ sở dữ liệu đám mây Firestore thành công ✓');
+    } catch (e) {
+      showToast('Lỗi tải dữ liệu lên đám mây: ' + (e instanceof Error ? e.message : String(e)));
+    }
   };
 
   // Auth handlers
-  const handleLoginSuccess = async (user: UserAccount) => {
-    // Do not expose the application before the Cloud session and profile-backed
-    // storage are fully initialized. This prevents a fresh browser from briefly
-    // falling back to legacy localStorage/default accounts.
-    setAuthLoading(true);
-    const cloudInitialized = await initializeCloudStorage();
-    if (!cloudInitialized) {
-      await signOutCloud();
-      clearCloudCache();
-      setCurrentUserState(null);
-      setCurrentUser(null);
-      setIsLoginModalOpen(false);
-      setAuthLoading(false);
-      showToast('Không thể khởi tạo Cloud. Dữ liệu cục bộ/mật khẩu mặc định sẽ không được dùng.');
-      return;
-    }
-
+  const handleLoginSuccess = (user: UserAccount) => {
     setCurrentUserState(user);
-    setCurrentUser(user);
     setIsLoginModalOpen(false);
-    setSelectedStaffId(user.staffId || '');
-    startCloudRealtime(() => {
-      applyCurrentDataToState();
-    });
-    await loadAllData();
-    setAuthLoading(false);
+    if (user.staffId) {
+      setSelectedStaffId(user.staffId);
+    } else {
+      setSelectedStaffId('');
+    }
     showToast(`Đăng nhập thành công: ${user.rank} ${user.name} ✓`);
   };
 
   const handleLogout = () => {
-    void signOutCloud();
-    clearCloudCache();
-    void stopCloudRealtime();
     logoutUser();
     setCurrentUserState(null);
     setIsLoginModalOpen(false);
@@ -514,8 +455,6 @@ export function App() {
         canBoName: recordData.staffName,
         isDone: false,
         note: recordData.note || '',
-        referenceTitle: recordData.referenceTitle || '',
-        referenceLink: recordData.referenceLink || '',
         updatedAt: timestamp
       };
       const updated = [newRec, ...hkcchList];
@@ -534,8 +473,6 @@ export function App() {
         isDone: false,
         ketQuaTest: 'Chưa test',
         note: recordData.info1 || '',
-        referenceTitle: recordData.referenceTitle || '',
-        referenceLink: recordData.referenceLink || '',
         updatedAt: timestamp
       };
       const updated = [newRec, ...matuyList];
@@ -553,8 +490,6 @@ export function App() {
         canBoId: recordData.staffId,
         canBoName: recordData.staffName,
         isDone: false,
-        referenceTitle: recordData.referenceTitle || '',
-        referenceLink: recordData.referenceLink || '',
         updatedAt: timestamp
       };
       const updated = [newRec, ...dcttpList];
@@ -573,8 +508,6 @@ export function App() {
         canBoName: recordData.staffName,
         status: 'pending',
         isDone: false,
-        referenceTitle: recordData.referenceTitle || '',
-        referenceLink: recordData.referenceLink || '',
         updatedAt: timestamp
       };
       const updated = [newRec, ...datdaiList];
@@ -594,8 +527,6 @@ export function App() {
         isDone: false,
         note: recordData.note || '',
         info1: recordData.info1,
-        referenceTitle: recordData.referenceTitle || '',
-        referenceLink: recordData.referenceLink || '',
         updatedAt: timestamp
       };
       const updated = [newRec, ...genericTasksList];
@@ -614,19 +545,6 @@ export function App() {
     setSelectedStaffId(staffId);
     setCurrentTab('update');
   };
-
-  // Authenticate against the central Supabase database.
-  if (authLoading) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white">
-        <div className="text-center">
-          <div className="w-10 h-10 mx-auto mb-3 rounded-full border-4 border-amber-400/30 border-t-amber-400 animate-spin" />
-          <div className="text-sm font-bold">Đang kết nối cơ sở dữ liệu trung tâm...</div>
-          <div className="text-xs text-slate-400 mt-1">Supabase • QLNVCSKV</div>
-        </div>
-      </div>
-    );
-  }
 
   // If user is not authenticated, show the official Police Login Portal (Strict login, no guest mode)
   if (!currentUser) {
@@ -661,16 +579,68 @@ export function App() {
         onOpenChangePassword={() => setIsChangePasswordOpen(true)}
         onOpenLoginModal={() => setIsLoginModalOpen(true)}
         onOpenAccountManagement={() => setIsAccountModalOpen(true)}
-        onOpenInformationLibrary={() => setIsInformationLibraryOpen(true)}
-        onOpenResidentialGroupManagement={
-          currentUser?.role === 'admin'
-            ? () => setIsResidentialModalOpen(true)
-            : undefined
-        }
+        onOpenResidentialModal={() => setIsResidentialModalOpen(true)}
+        cloudConnected={cloudStatus.isConnected}
+        cloudSyncing={cloudStatus.isSyncing}
       />
 
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-5">
+        {/* Cloud Database Persistence Banner */}
+        {!isCloudBannerDismissed && (
+          <div className="mb-4 p-3 rounded-2xl bg-gradient-to-r from-emerald-950 via-slate-900 to-blue-950 border border-emerald-500/40 text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-emerald-400 shrink-0">
+                <Cloud className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-black text-emerald-300 uppercase tracking-wide">
+                    Cơ Sở Dữ Liệu Đám Mây Firestore Trực Tuyến
+                  </span>
+                  <span className="px-1.5 py-0.2 rounded-md text-[10px] font-bold bg-emerald-800 text-emerald-100 flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    {cloudStatus.isConnected ? 'Đang kết nối đám mây' : 'Đang thiết lập'}
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-300">
+                  Dữ liệu được lưu trữ tập trung trên máy chủ đám mây, tự động đồng bộ thời gian thực giữa mọi máy tính và thiết bị của cán bộ.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+              <button
+                type="button"
+                id="btn-force-cloud-sync"
+                onClick={handleForceCloudSync}
+                className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-[11px] font-bold text-slate-200 transition flex items-center gap-1.5 cursor-pointer"
+                title="Kéo dữ liệu mới nhất từ đám mây về"
+              >
+                <RefreshCw className={`w-3 h-3 ${cloudStatus.isSyncing ? 'animate-spin text-emerald-400' : ''}`} />
+                <span>Đồng bộ từ đám mây</span>
+              </button>
+              <button
+                type="button"
+                id="btn-upload-all-cloud"
+                onClick={handleUploadAllToCloud}
+                className="px-2.5 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-600 border border-emerald-500 text-[11px] font-bold text-white transition flex items-center gap-1.5 cursor-pointer shadow-xs"
+                title="Đẩy dữ liệu lên cơ sở dữ liệu đám mây"
+              >
+                <UploadCloud className="w-3 h-3" />
+                <span>Tải lên đám mây</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsCloudBannerDismissed(true)}
+                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition"
+                title="Đóng thông báo"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
+
         {currentTab === 'update' && (
           <TaskUpdateView
             currentTask={currentTask}
@@ -693,8 +663,8 @@ export function App() {
             onDeleteRecord={handleDeleteRecord}
             onOpenAddModal={() => setIsAddModalOpen(true)}
             onOpenManageCategories={() => setIsManageCategoriesOpen(true)}
+            onOpenResidentialModal={() => setIsResidentialModalOpen(true)}
             onOpenExcelModal={() => setIsExcelModalOpen(true)}
-            onOpenInformationLibrary={() => setIsInformationLibraryOpen(true)}
           />
         )}
 
@@ -716,7 +686,6 @@ export function App() {
             matuyList={matuyList}
             dcttpList={dcttpList}
             datdaiList={datdaiList}
-            genericTasksList={genericTasksList}
             onAddStaff={handleAddStaff}
             onUpdateStaff={handleUpdateStaff}
             onDeleteStaff={handleDeleteStaff}
@@ -724,13 +693,8 @@ export function App() {
             onReassignTasks={handleReassignTasks}
             onNavigateToTaskView={handleSelectTaskAndStaff}
             onOpenAccountManagement={() => setIsAccountModalOpen(true)}
-            onOpenResidentialGroupModal={
-              currentUser?.role === 'admin'
-                ? () => setIsResidentialModalOpen(true)
-                : undefined
-            }
+            onOpenResidentialGroupModal={() => setIsResidentialModalOpen(true)}
             onOpenExcelModal={() => setIsExcelModalOpen(true)}
-            onOpenInformationLibrary={() => setIsInformationLibraryOpen(true)}
           />
         )}
       </main>
@@ -742,28 +706,26 @@ export function App() {
         staffList={staffList}
         currentTaskType={currentTask}
         onAddTask={handleAddTask}
+        onOpenResidentialGroupManager={() => setIsResidentialModalOpen(true)}
       />
 
       <DataManagementModal
         isOpen={isDataModalOpen}
         onClose={() => setIsDataModalOpen(false)}
         onDataChanged={loadAllData}
-        isAdmin={currentUser?.role === 'admin'}
+        onOpenResidentialModal={() => setIsResidentialModalOpen(true)}
         onOpenExcelModal={() => setIsExcelModalOpen(true)}
-        onOpenResidentialModal={
-          currentUser?.role === 'admin'
-            ? () => setIsResidentialModalOpen(true)
-            : undefined
-        }
       />
 
-      <InformationLibraryModal
-        isOpen={isInformationLibraryOpen}
-        onClose={() => setIsInformationLibraryOpen(false)}
-        isAdmin={currentUser?.role === 'admin'}
-        currentUserName={currentUser ? `${currentUser.rank} ${currentUser.name}` : undefined}
+      {/* Residential Group Management Modal */}
+      <ResidentialGroupModal
+        isOpen={isResidentialModalOpen}
+        onClose={() => setIsResidentialModalOpen(false)}
+        staffList={staffList}
+        onDataUpdated={loadAllData}
       />
 
+      {/* Excel Import / Export by Residential Group Modal */}
       <ExcelImportExportModal
         isOpen={isExcelModalOpen}
         onClose={() => setIsExcelModalOpen(false)}
@@ -775,30 +737,24 @@ export function App() {
       <ManageTaskCategoriesModal
         isOpen={isManageCategoriesOpen}
         onClose={() => setIsManageCategoriesOpen(false)}
-        onCategoriesUpdated={handleCategoriesUpdated}
+        onCategoriesUpdated={loadAllData}
       />
 
-      {currentUser && isCloudReady() && (
-        <CloudChangePasswordModal
+      {currentUser && (
+        <ChangePasswordModal
           isOpen={isChangePasswordOpen}
           onClose={() => setIsChangePasswordOpen(false)}
+          currentUser={currentUser}
           onPasswordChanged={(msg) => showToast(msg)}
         />
       )}
 
-      <CloudAccountManagementModal
-        isOpen={isAccountModalOpen && isCloudReady() && currentUser?.role === 'admin'}
+      {/* Account Management Modal (Admin only) */}
+      <AccountManagementModal
+        isOpen={isAccountModalOpen}
         onClose={() => setIsAccountModalOpen(false)}
-        onAccountsUpdated={() => void loadAllData()}
+        onAccountsUpdated={loadAllData}
         currentUserId={currentUser?.id}
-      />
-
-      {/* Residential Group Management Modal (Admin only) */}
-      <ResidentialGroupModal
-        isOpen={isResidentialModalOpen && currentUser?.role === 'admin'}
-        onClose={() => setIsResidentialModalOpen(false)}
-        staffList={staffList}
-        onDataUpdated={loadAllData}
       />
 
       {/* In-App Delete Task Confirmation Modal */}

@@ -13,8 +13,7 @@ import {
   ShieldAlert,
   ArrowRightLeft,
   Building,
-  ExternalLink,
-  BookOpen
+  Cloud
 } from 'lucide-react';
 import { UserAccount } from '../types';
 
@@ -29,8 +28,9 @@ interface NavbarProps {
   onOpenChangePassword: () => void;
   onOpenLoginModal: () => void;
   onOpenAccountManagement?: () => void;
-  onOpenInformationLibrary?: () => void;
-  onOpenResidentialGroupManagement?: () => void;
+  onOpenResidentialModal?: () => void;
+  cloudConnected?: boolean;
+  cloudSyncing?: boolean;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -44,8 +44,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenChangePassword,
   onOpenLoginModal,
   onOpenAccountManagement,
-  onOpenInformationLibrary,
-  onOpenResidentialGroupManagement
+  onOpenResidentialModal,
+  cloudConnected = true,
+  cloudSyncing = false
 }) => {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -116,18 +117,6 @@ export const Navbar: React.FC<NavbarProps> = ({
             <span>Báo Cáo</span>
           </button>
 
-          {/* Quick access to the queue-number system */}
-          <button
-            type="button"
-            id="btn-open-bocso-system"
-            onClick={() => window.open('https://bocso.capr.click/', '_blank', 'noopener,noreferrer')}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-amber-100 bg-emerald-700/80 hover:bg-emerald-600 border border-emerald-400/30 shadow-sm transition-all duration-200"
-            title="Mở hệ thống Bóc số"
-          >
-            <ExternalLink className="w-3.5 h-3.5" />
-            <span>Bóc Số</span>
-          </button>
-
           {/* Staff Management & Task Assignment Tab (Chỉ huy / Toàn quyền or Officer viewing) */}
           <button
             type="button"
@@ -167,6 +156,34 @@ export const Navbar: React.FC<NavbarProps> = ({
             <Database className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Dữ liệu</span>
           </button>
+
+          {/* Residential Groups Management Button */}
+          {onOpenResidentialModal && (
+            <button
+              type="button"
+              id="btn-open-residential-nav"
+              onClick={onOpenResidentialModal}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 bg-blue-900/60 hover:bg-blue-800 text-blue-200 border border-blue-400/40 rounded-xl text-xs font-bold transition cursor-pointer"
+              title="Quản lý danh sách Tổ dân phố (Thêm, đổi tên, xóa, gán cán bộ)"
+            >
+              <Building className="w-3.5 h-3.5 text-blue-300" />
+              <span className="hidden sm:inline">Tổ Dân Phố</span>
+            </button>
+          )}
+
+          {/* Cloud Database Persistence Badge */}
+          <div
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[10px] font-bold border transition ${
+              cloudConnected
+                ? 'bg-emerald-950/70 border-emerald-600/50 text-emerald-300'
+                : 'bg-amber-950/70 border-amber-600/50 text-amber-300'
+            }`}
+            title={cloudConnected ? 'Cơ sở dữ liệu đám mây Firestore: Trực tuyến & Đã đồng bộ' : 'Đang kết nối Firestore...'}
+          >
+            <Cloud className={`w-3.5 h-3.5 ${cloudSyncing ? 'animate-bounce text-emerald-400' : 'text-emerald-400'}`} />
+            <span className="hidden lg:inline">Đám mây Firestore</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+          </div>
 
           {/* User Profile / Login status */}
           <div className="relative" ref={menuRef}>
@@ -250,33 +267,18 @@ export const Navbar: React.FC<NavbarProps> = ({
                         </button>
                       )}
 
-                      {onOpenInformationLibrary && (
+                      {onOpenResidentialModal && (
                         <button
                           type="button"
-                          id="btn-nav-information-library"
+                          id="btn-menu-manage-residential"
                           onClick={() => {
                             setIsUserMenuOpen(false);
-                            onOpenInformationLibrary();
-                          }}
-                          className="w-full text-left px-3 py-2 text-xs text-emerald-300 hover:text-emerald-200 hover:bg-slate-800 rounded-xl flex items-center gap-2 transition font-semibold"
-                        >
-                          <BookOpen className="w-3.5 h-3.5 text-emerald-400" />
-                          <span>Thông Tin & Tài Liệu</span>
-                        </button>
-                      )}
-
-                      {currentUser.role === 'admin' && onOpenResidentialGroupManagement && (
-                        <button
-                          type="button"
-                          id="btn-nav-manage-residential-groups"
-                          onClick={() => {
-                            setIsUserMenuOpen(false);
-                            onOpenResidentialGroupManagement();
+                            onOpenResidentialModal();
                           }}
                           className="w-full text-left px-3 py-2 text-xs text-blue-300 hover:text-blue-200 hover:bg-slate-800 rounded-xl flex items-center gap-2 transition font-semibold"
                         >
                           <Building className="w-3.5 h-3.5 text-blue-400" />
-                          <span>Quản Lý Tổ Dân Phố</span>
+                          <span>Quản Lý Tổ Dân Phố (TDP)</span>
                         </button>
                       )}
 

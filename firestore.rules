@@ -1,0 +1,61 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /staff/{staffId} {
+      allow read, write: if true;
+    }
+
+    match /accounts/{accountId} {
+      allow read, write: if true;
+    }
+
+    match /task_categories/{categoryId} {
+      allow read, write: if true;
+    }
+
+    match /taskCategories/{categoryId} {
+      allow read, write: if true;
+    }
+
+    match /residential_groups/{groupId} {
+      allow read, write: if true;
+    }
+
+    match /residentialGroups/{groupId} {
+      allow read, write: if true;
+    }
+
+    match /hkcch/{recordId} {
+      allow read, write: if true;
+    }
+
+    match /matuy/{recordId} {
+      allow read, write: if true;
+    }
+
+    match /dcttp/{recordId} {
+      allow read, write: if true;
+    }
+
+    match /datdai/{recordId} {
+      allow read, write: if true;
+    }
+
+    match /generic_tasks/{recordId} {
+      allow read, write: if true;
+    }
+
+    match /app_state/{docId} {
+      allow read, write: if true;
+    }
+
+    match /app_config/{docId} {
+      allow read, write: if true;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

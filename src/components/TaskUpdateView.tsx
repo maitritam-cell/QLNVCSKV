@@ -35,8 +35,7 @@ import {
   Filter,
   CheckCircle2,
   AlertCircle,
-  FileSpreadsheet,
-  BookOpen
+  FileSpreadsheet
 } from 'lucide-react';
 
 interface TaskUpdateViewProps {
@@ -66,7 +65,7 @@ interface TaskUpdateViewProps {
   onOpenAddModal: () => void;
   onOpenManageCategories?: () => void;
   onOpenExcelModal?: () => void;
-  onOpenInformationLibrary?: () => void;
+  onOpenResidentialModal?: () => void;
 }
 
 export const TaskUpdateView: React.FC<TaskUpdateViewProps> = ({
@@ -91,7 +90,7 @@ export const TaskUpdateView: React.FC<TaskUpdateViewProps> = ({
   onOpenAddModal,
   onOpenManageCategories,
   onOpenExcelModal,
-  onOpenInformationLibrary
+  onOpenResidentialModal
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'done' | 'pending'>('all');
@@ -327,6 +326,20 @@ export const TaskUpdateView: React.FC<TaskUpdateViewProps> = ({
           </span>
 
           <div className="flex items-center gap-2">
+            {onOpenResidentialModal && (
+              <button
+                type="button"
+                id="btn-open-residential-top"
+                onClick={onOpenResidentialModal}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-900/90 hover:bg-blue-800 text-blue-200 border border-blue-700/60 rounded-xl text-xs font-bold shadow-xs transition active:scale-95 cursor-pointer"
+                title="Quản lý danh sách Tổ dân phố (Thêm mới, đổi tên, xóa, gán cán bộ)"
+              >
+                <Building className="w-3.5 h-3.5 text-blue-300" />
+                <span className="hidden sm:inline">Quản lý</span>
+                <span>Tổ Dân Phố ({residentialGroups.length})</span>
+              </button>
+            )}
+
             {onOpenExcelModal && (
               <button
                 type="button"
@@ -338,20 +351,6 @@ export const TaskUpdateView: React.FC<TaskUpdateViewProps> = ({
                 <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
                 <span className="hidden sm:inline">Excel</span>
                 <span>Tổ Dân Phố</span>
-              </button>
-            )}
-
-            {onOpenInformationLibrary && (
-              <button
-                type="button"
-                id="btn-open-information-library-task"
-                onClick={onOpenInformationLibrary}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 border border-amber-400 rounded-xl text-xs font-black shadow-xs transition active:scale-95"
-                title="Mở kho thông tin và tài liệu nghiên cứu"
-              >
-                <BookOpen className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Thông tin & Tài liệu</span>
-                <span className="sm:hidden">Tài liệu</span>
               </button>
             )}
 

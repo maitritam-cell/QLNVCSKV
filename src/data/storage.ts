@@ -52,6 +52,24 @@ export const STORAGE_KEYS = {
   RESIDENTIAL_GROUPS: 'nhiemvu_residential_groups_v1'
 };
 
+// Cloud storage change hook
+export type StorageChangeHandler = (entity: string, data: any) => void;
+let storageChangeHandler: StorageChangeHandler | null = null;
+
+export function registerStorageChangeHandler(handler: StorageChangeHandler) {
+  storageChangeHandler = handler;
+}
+
+export function notifyStorageChange(entity: string, data: any) {
+  if (storageChangeHandler) {
+    try {
+      storageChangeHandler(entity, data);
+    } catch (e) {
+      console.error(`Error notifying storage change for ${entity}:`, e);
+    }
+  }
+}
+
 export const DEFAULT_RESIDENTIAL_GROUPS: ResidentialGroup[] = [
   { id: 'tdp_1', name: 'Tổ 1', code: 'TDP01', assignedStaffIds: ['cb_hung'], householdCount: 220, populationCount: 850, note: 'Khu dân cư A' },
   { id: 'tdp_2', name: 'Tổ 2', code: 'TDP02', assignedStaffIds: ['cb_hung'], householdCount: 195, populationCount: 780, note: 'Khu tập thể B' },
@@ -86,6 +104,7 @@ export function saveResidentialGroups(groups: ResidentialGroup[]): void {
     return;
   }
   localStorage.setItem(STORAGE_KEYS.RESIDENTIAL_GROUPS, JSON.stringify(groups));
+  notifyStorageChange('residential_groups', groups);
 }
 
 export function addResidentialGroup(data: Omit<ResidentialGroup, 'id'>): ResidentialGroup {
@@ -417,6 +436,7 @@ export function saveTaskCategories(list: TaskCategoryConfig[]): void {
     return;
   }
   localStorage.setItem(STORAGE_KEYS.TASK_CATEGORIES, JSON.stringify(list));
+  notifyStorageChange('task_categories', list);
 }
 
 export function addTaskCategory(data: Omit<TaskCategoryConfig, 'id'>): TaskCategoryConfig {
@@ -523,6 +543,7 @@ export function saveGenericTasksList(list: GenericTaskRecord[]): void {
     return;
   }
   localStorage.setItem(STORAGE_KEYS.GENERIC_TASKS, JSON.stringify(list));
+  notifyStorageChange('generic_tasks', list);
 }
 
 export const TASK_CONFIG: Record<
@@ -567,6 +588,7 @@ export function saveStaffList(list: Staff[]): void {
     return;
   }
   localStorage.setItem(STORAGE_KEYS.STAFF, JSON.stringify(list));
+  notifyStorageChange('staff', list);
 }
 
 export function getHkcchList(): HKCCHRecord[] {
@@ -590,6 +612,7 @@ export function saveHkcchList(list: HKCCHRecord[]): void {
     return;
   }
   localStorage.setItem(STORAGE_KEYS.HKCCH, JSON.stringify(list));
+  notifyStorageChange('hkcch', list);
 }
 
 export function getMatuyList(): MaTuyRecord[] {
@@ -613,6 +636,7 @@ export function saveMatuyList(list: MaTuyRecord[]): void {
     return;
   }
   localStorage.setItem(STORAGE_KEYS.MATUY, JSON.stringify(list));
+  notifyStorageChange('matuy', list);
 }
 
 export function getDcttpList(): DCTTPRecord[] {
@@ -636,6 +660,7 @@ export function saveDcttpList(list: DCTTPRecord[]): void {
     return;
   }
   localStorage.setItem(STORAGE_KEYS.DCTTP, JSON.stringify(list));
+  notifyStorageChange('dcttp', list);
 }
 
 export function getDatdaiList(): DatDaiRecord[] {
@@ -659,6 +684,7 @@ export function saveDatdaiList(list: DatDaiRecord[]): void {
     return;
   }
   localStorage.setItem(STORAGE_KEYS.DATDAI, JSON.stringify(list));
+  notifyStorageChange('datdai', list);
 }
 
 export function getConfig(): AppConfig {
@@ -885,6 +911,7 @@ export function getUserAccounts(): UserAccount[] {
 
 export function saveUserAccounts(accounts: UserAccount[]): void {
   localStorage.setItem(STORAGE_KEYS.ACCOUNTS, JSON.stringify(accounts));
+  notifyStorageChange('accounts', accounts);
 }
 
 export function getCurrentUser(): UserAccount | null {
