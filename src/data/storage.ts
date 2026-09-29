@@ -23,6 +23,18 @@ import {
   INITIAL_DCTTP,
   INITIAL_DATDAI
 } from './initialData';
+import {
+  cloudCache,
+  isCloudReady,
+  initializeCloudStorage as initializeCloudStorageRemote,
+  persistStaff,
+  persistResidentialGroups,
+  persistTaskCategories,
+  persistTaskList,
+  persistInformationPosts,
+  persistSetting,
+  migrateLocalDataToCloud as migrateLocalDataToCloudRemote
+} from './cloudStorage';
 
 export const STORAGE_KEYS = {
   STAFF: 'nhiemvu_staff_list_v1',
@@ -53,6 +65,7 @@ export const DEFAULT_RESIDENTIAL_GROUPS: ResidentialGroup[] = [
 ];
 
 export function getResidentialGroups(): ResidentialGroup[] {
+  if (isCloudReady()) return cloudCache.residentialGroups;
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.RESIDENTIAL_GROUPS);
     if (!raw) {
@@ -67,6 +80,10 @@ export function getResidentialGroups(): ResidentialGroup[] {
 }
 
 export function saveResidentialGroups(groups: ResidentialGroup[]): void {
+  if (isCloudReady()) {
+    void persistResidentialGroups(groups);
+    return;
+  }
   localStorage.setItem(STORAGE_KEYS.RESIDENTIAL_GROUPS, JSON.stringify(groups));
 }
 
@@ -379,6 +396,7 @@ export const DEFAULT_TASK_CATEGORIES: TaskCategoryConfig[] = [
 ];
 
 export function getTaskCategories(): TaskCategoryConfig[] {
+  if (isCloudReady()) return cloudCache.taskCategories;
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.TASK_CATEGORIES);
     if (!raw) {
@@ -393,6 +411,10 @@ export function getTaskCategories(): TaskCategoryConfig[] {
 }
 
 export function saveTaskCategories(list: TaskCategoryConfig[]): void {
+  if (isCloudReady()) {
+    void persistTaskCategories(list);
+    return;
+  }
   localStorage.setItem(STORAGE_KEYS.TASK_CATEGORIES, JSON.stringify(list));
 }
 
@@ -442,6 +464,7 @@ export function updateTaskCategory(cat: TaskCategoryConfig): boolean {
 const INFORMATION_POSTS_KEY = 'qlnv_informational_posts';
 
 export function getInformationPosts(): InformationPost[] {
+  if (isCloudReady()) return cloudCache.informationPosts;
   try {
     const raw = localStorage.getItem(INFORMATION_POSTS_KEY);
     return raw ? JSON.parse(raw) : [];
@@ -480,6 +503,7 @@ export function deleteInformationPost(id: string): void {
 }
 
 export function getGenericTasksList(): GenericTaskRecord[] {
+  if (isCloudReady()) return cloudCache.genericTasks;
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.GENERIC_TASKS);
     return raw ? JSON.parse(raw) : [];
@@ -489,6 +513,10 @@ export function getGenericTasksList(): GenericTaskRecord[] {
 }
 
 export function saveGenericTasksList(list: GenericTaskRecord[]): void {
+  if (isCloudReady()) {
+    void persistTaskList('__generic__', list);
+    return;
+  }
   localStorage.setItem(STORAGE_KEYS.GENERIC_TASKS, JSON.stringify(list));
 }
 
@@ -515,6 +543,7 @@ export const TASK_CONFIG: Record<
 );
 
 export function getStaffList(): Staff[] {
+  if (isCloudReady()) return cloudCache.staff;
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.STAFF);
     if (!raw) {
@@ -528,10 +557,15 @@ export function getStaffList(): Staff[] {
 }
 
 export function saveStaffList(list: Staff[]): void {
+  if (isCloudReady()) {
+    void persistStaff(list);
+    return;
+  }
   localStorage.setItem(STORAGE_KEYS.STAFF, JSON.stringify(list));
 }
 
 export function getHkcchList(): HKCCHRecord[] {
+  if (isCloudReady()) return cloudCache.hkcch;
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.HKCCH);
     if (!raw) {
@@ -545,10 +579,16 @@ export function getHkcchList(): HKCCHRecord[] {
 }
 
 export function saveHkcchList(list: HKCCHRecord[]): void {
+  if (isCloudReady()) {
+    cloudCache.hkcch = list;
+    void persistTaskList('hkcch', list);
+    return;
+  }
   localStorage.setItem(STORAGE_KEYS.HKCCH, JSON.stringify(list));
 }
 
 export function getMatuyList(): MaTuyRecord[] {
+  if (isCloudReady()) return cloudCache.matuy;
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.MATUY);
     if (!raw) {
@@ -562,10 +602,16 @@ export function getMatuyList(): MaTuyRecord[] {
 }
 
 export function saveMatuyList(list: MaTuyRecord[]): void {
+  if (isCloudReady()) {
+    cloudCache.matuy = list;
+    void persistTaskList('matuy', list);
+    return;
+  }
   localStorage.setItem(STORAGE_KEYS.MATUY, JSON.stringify(list));
 }
 
 export function getDcttpList(): DCTTPRecord[] {
+  if (isCloudReady()) return cloudCache.dcttp;
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.DCTTP);
     if (!raw) {
@@ -579,10 +625,16 @@ export function getDcttpList(): DCTTPRecord[] {
 }
 
 export function saveDcttpList(list: DCTTPRecord[]): void {
+  if (isCloudReady()) {
+    cloudCache.dcttp = list;
+    void persistTaskList('dcttp', list);
+    return;
+  }
   localStorage.setItem(STORAGE_KEYS.DCTTP, JSON.stringify(list));
 }
 
 export function getDatdaiList(): DatDaiRecord[] {
+  if (isCloudReady()) return cloudCache.datdai;
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.DATDAI);
     if (!raw) {
@@ -596,6 +648,11 @@ export function getDatdaiList(): DatDaiRecord[] {
 }
 
 export function saveDatdaiList(list: DatDaiRecord[]): void {
+  if (isCloudReady()) {
+    cloudCache.datdai = list;
+    void persistTaskList('datdai', list);
+    return;
+  }
   localStorage.setItem(STORAGE_KEYS.DATDAI, JSON.stringify(list));
 }
 
@@ -1091,3 +1148,16 @@ export function resetAllDataToDefault(): void {
   localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
 }
 
+
+
+export async function initializeCloudStorage(): Promise<boolean> {
+  return initializeCloudStorageRemote();
+}
+
+export async function migrateLocalDataToCloud(): Promise<{ ok: boolean; message: string }> {
+  if (!isCloudReady()) {
+    const initialized = await initializeCloudStorageRemote();
+    if (!initialized) return { ok: false, message: 'Chưa đăng nhập Supabase nên chưa thể chuyển dữ liệu.' };
+  }
+  return migrateLocalDataToCloudRemote();
+}
