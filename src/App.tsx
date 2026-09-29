@@ -34,7 +34,10 @@ import {
   deleteUserAccount,
   getGenericTasksList,
   saveGenericTasksList,
-  getTaskCategories
+  getTaskCategories,
+  initializeCloudStorage,
+  isCloudReady,
+  clearCloudCache
 } from './data/storage';
 import { Navbar } from './components/Navbar';
 import { TaskUpdateView } from './components/TaskUpdateView';
@@ -50,10 +53,13 @@ import { ResidentialGroupModal } from './components/ResidentialGroupModal';
 import { ExcelImportExportModal } from './components/ExcelImportExportModal';
 import { InformationLibraryModal } from './components/InformationLibraryModal';
 import { ShieldCheck, Check, Trash2, AlertTriangle } from 'lucide-react';
+import { supabase } from './lib/supabase';
+import { fetchCurrentProfile, getCloudSession, signOutCloud } from './services/cloudAuth';
 
 export function App() {
   // Authentication & session state (Strict Login - No trial/guest mode)
-  const [currentUser, setCurrentUserState] = useState<UserAccount | null>(() => getCurrentUser());
+  const [currentUser, setCurrentUserState] = useState<UserAccount | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
@@ -100,23 +106,70 @@ export function App() {
   };
 
   // Load all initial data from local storage
-  const loadAllData = useCallback(() => {
+  const loadAllData = useCallback(async () => {
     setIsRefreshing(true);
+    if (isCloudReady()) {
+      await initializeCloudStorage();
+    }
+
     const loadedStaff = getStaffList();
     setStaffList(loadedStaff);
-    syncStaffToAccounts(loadedStaff);
+    if (!isCloudReady()) {
+      syncStaffToAccounts(loadedStaff);
+    }
     setHkcchList(getHkcchList());
     setMatuyList(getMatuyList());
     setDcttpList(getDcttpList());
     setDatdaiList(getDatdaiList());
     setGenericTasksList(getGenericTasksList());
-    setTimeout(() => {
-      setIsRefreshing(false);
-    }, 300);
+    setTimeout(() => setIsRefreshing(false), 300);
   }, []);
 
   useEffect(() => {
-    loadAllData();
+    let mounted = true;
+
+    const bootstrapSession = async () => {
+      setAuthLoading(true);
+      const session = await getCloudSession();
+
+      if (session) {
+        const profile = await fetchCurrentProfile();
+        if (profile) {
+          setCurrentUserState(profile);
+          setCurrentUser(profile);
+          await initializeCloudStorage();
+          if (mounted) {
+            const categories = getTaskCategories();
+            if (categories.length > 0 && !categories.some((cat) => cat.id === currentTask)) {
+              setCurrentTask(categories[0].id);
+            }
+          }
+          await loadAllData();
+        } else {
+          await signOutCloud();
+          clearCloudCache();
+          logoutUser();
+          if (mounted) setCurrentUserState(null);
+        }
+      }
+
+      if (mounted) setAuthLoading(false);
+    };
+
+    void bootstrapSession();
+
+    const { data: authSubscription } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session && mounted) {
+        clearCloudCache();
+        setCurrentUserState(null);
+        logoutUser();
+      }
+    });
+
+    return () => {
+      mounted = false;
+      authSubscription.subscription.unsubscribe();
+    };
   }, [loadAllData]);
 
   const handleCategoriesUpdated = () => {
@@ -130,16 +183,16 @@ export function App() {
   // Auth handlers
   const handleLoginSuccess = (user: UserAccount) => {
     setCurrentUserState(user);
+    setCurrentUser(user);
     setIsLoginModalOpen(false);
-    if (user.staffId) {
-      setSelectedStaffId(user.staffId);
-    } else {
-      setSelectedStaffId('');
-    }
+    setSelectedStaffId(user.staffId || '');
+    void loadAllData();
     showToast(`Đăng nhập thành công: ${user.rank} ${user.name} ✓`);
   };
 
   const handleLogout = () => {
+    void signOutCloud();
+    clearCloudCache();
     logoutUser();
     setCurrentUserState(null);
     setIsLoginModalOpen(false);
@@ -524,6 +577,19 @@ export function App() {
     setSelectedStaffId(staffId);
     setCurrentTab('update');
   };
+
+  // Authenticate against the central Supabase database.
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white">
+        <div className="text-center">
+          <div className="w-10 h-10 mx-auto mb-3 rounded-full border-4 border-amber-400/30 border-t-amber-400 animate-spin" />
+          <div className="text-sm font-bold">Đang kết nối cơ sở dữ liệu trung tâm...</div>
+          <div className="text-xs text-slate-400 mt-1">Supabase • QLNVCSKV</div>
+        </div>
+      </div>
+    );
+  }
 
   // If user is not authenticated, show the official Police Login Portal (Strict login, no guest mode)
   if (!currentUser) {
