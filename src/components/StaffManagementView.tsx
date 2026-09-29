@@ -29,7 +29,8 @@ import {
   Clock,
   Users,
   Building,
-  FileSpreadsheet
+  FileSpreadsheet,
+  BookOpen
 } from 'lucide-react';
 
 interface StaffManagementViewProps {
@@ -48,6 +49,7 @@ interface StaffManagementViewProps {
   onOpenAccountManagement?: () => void;
   onOpenResidentialGroupModal?: () => void;
   onOpenExcelModal?: () => void;
+  onOpenInformationLibrary?: () => void;
 }
 
 export const StaffManagementView: React.FC<StaffManagementViewProps> = ({
@@ -65,7 +67,8 @@ export const StaffManagementView: React.FC<StaffManagementViewProps> = ({
   onNavigateToTaskView,
   onOpenAccountManagement,
   onOpenResidentialGroupModal,
-  onOpenExcelModal
+  onOpenExcelModal,
+  onOpenInformationLibrary
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const residentialGroups = getResidentialGroups();
@@ -361,6 +364,19 @@ export const StaffManagementView: React.FC<StaffManagementViewProps> = ({
             >
               <Building className="w-4 h-4 text-amber-400" />
               <span>Tổ Dân Phố ({getResidentialGroups().length})</span>
+            </button>
+          )}
+
+          {onOpenInformationLibrary && (
+            <button
+              type="button"
+              id="btn-open-information-library-staff"
+              onClick={onOpenInformationLibrary}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs shadow-xs transition active:scale-95"
+              title="Xem và đăng thông tin, tài liệu nghiên cứu"
+            >
+              <BookOpen className="w-4 h-4" />
+              <span>Thông Tin & Tài Liệu</span>
             </button>
           )}
 
