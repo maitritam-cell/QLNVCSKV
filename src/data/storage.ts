@@ -869,37 +869,17 @@ export const INITIAL_USER_ACCOUNTS: UserAccount[] = [
 ];
 
 export function getUserAccounts(): UserAccount[] {
+  // Legacy localStorage accounts are no longer an authentication source.
+  // Cloud/Supabase Auth is the only active login mechanism.
+  // Keep this getter only for backward-compatible code paths; never recreate
+  // default accounts after the browser/site data has been cleared.
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.ACCOUNTS);
-    let accounts: UserAccount[] = raw ? JSON.parse(raw) : [...INITIAL_USER_ACCOUNTS];
-
-    // Ensure the primary requested admin account 'maitritam' (Mai Trí Tâm) is always present!
-    const hasMaiTriTam = accounts.some(
-      (a) =>
-        a.username.toLowerCase() === 'maitritam' ||
-        (a.email && a.email.toLowerCase() === 'maitritam@gmail.com') ||
-        a.id === 'user_admin_maitritam'
-    );
-
-    if (!hasMaiTriTam) {
-      accounts.unshift({
-        id: 'user_admin_maitritam',
-        username: 'maitritam',
-        email: 'maitritam@gmail.com',
-        password: '123',
-        role: 'admin',
-        name: 'Mai Trí Tâm',
-        rank: 'Trung tá',
-        title: 'Chỉ huy trưởng - Quản trị hệ thống',
-        phone: '0989.888.999',
-        assignedAreas: ['Toàn địa bàn']
-      });
-      localStorage.setItem(STORAGE_KEYS.ACCOUNTS, JSON.stringify(accounts));
-    }
-
-    return accounts;
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
   } catch {
-    return INITIAL_USER_ACCOUNTS;
+    return [];
   }
 }
 
@@ -938,6 +918,8 @@ export function authenticateUser(
   identifier: string,
   pass: string
 ): { success: boolean; user?: UserAccount; error?: string } {
+  // This legacy function is retained only for compatibility with older modules.
+  // Active application login uses Supabase Auth via loginWithCloudIdentifier.
   const accounts = getUserAccounts();
   const rawId = identifier.trim().toLowerCase();
   const cleanId = normalizeText(identifier);
@@ -975,16 +957,12 @@ export function authenticateUser(
     };
   }
 
-  // Accept password: matched stored password OR default password '123' / '123456'
-  const isPassValid =
-    user.password === cleanPass ||
-    (cleanPass === '123' && (user.password === '123456' || user.password === '123')) ||
-    (cleanPass === '123456' && (user.password === '123456' || user.password === '123'));
+  const isPassValid = user.password === cleanPass;
 
   if (!isPassValid) {
     return {
       success: false,
-      error: 'Mật khẩu không chính xác. Mật khẩu mặc định hệ thống là: 123 hoặc 123456'
+      error: 'Mật khẩu không chính xác.'
     };
   }
 
