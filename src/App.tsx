@@ -711,6 +711,7 @@ export function App() {
         isOpen={isDataModalOpen}
         onClose={() => setIsDataModalOpen(false)}
         onDataChanged={loadAllData}
+        isAdmin={currentUser?.role === 'admin'}
         onOpenExcelModal={() => setIsExcelModalOpen(true)}
         onOpenResidentialModal={
           currentUser?.role === 'admin'
