@@ -56,8 +56,6 @@ export const AccountManagementModal: React.FC<AccountManagementModalProps> = ({
   const [cloudMode, setCloudMode] = useState(false);
   const [cloudStaffId, setCloudStaffId] = useState('');
 
-  if (!isOpen) return null;
-
   const refreshAccounts = async () => {
     if (isCloudReady()) {
       setCloudMode(true);
@@ -79,6 +77,8 @@ export const AccountManagementModal: React.FC<AccountManagementModalProps> = ({
   useEffect(() => {
     if (isOpen) void refreshAccounts();
   }, [isOpen]);
+
+  if (!isOpen) return null;
 
   const handleOpenAdd = () => {
     setEditingAccount(null);

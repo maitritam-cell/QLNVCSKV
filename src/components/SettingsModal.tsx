@@ -30,13 +30,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onResetData,
   onImportData
 }) => {
-  if (!isOpen) return null;
-
   const [unitName, setUnitName] = useState(config.unitName || '');
   const [subUnitName, setSubUnitName] = useState(config.subUnitName || '');
   const [apiUrl, setApiUrl] = useState(config.apiUrl || '');
   const [useLiveGoogleSheet, setUseLiveGoogleSheet] = useState(config.useLiveGoogleSheet || false);
   const [testResult, setTestResult] = useState<{ status: 'idle' | 'testing' | 'success' | 'error'; message?: string }>({ status: 'idle' });
+
+  if (!isOpen) return null;
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();

@@ -18,8 +18,6 @@ export const AddRecordModal: React.FC<AddRecordModalProps> = ({
   currentTaskId,
   onAddRecord
 }) => {
-  if (!isOpen) return null;
-
   const [selectedType, setSelectedType] = useState<TaskType>(currentTaskId);
   const [canBoId, setCanBoId] = useState<string>(staffList[0]?.id || 'CB01');
   const [toDanPho, setToDanPho] = useState('Tổ 1');
@@ -41,6 +39,8 @@ export const AddRecordModal: React.FC<AddRecordModalProps> = ({
   const [chuHo, setChuHo] = useState('');
   const [cmndGoc, setCmndGoc] = useState('');
   const [diaChi, setDiaChi] = useState('');
+
+  if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
