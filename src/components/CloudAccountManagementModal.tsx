@@ -306,7 +306,7 @@ export const CloudAccountManagementModal: React.FC<CloudAccountManagementModalPr
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Họ và tên" required className="px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white" />
                 <input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Tên đăng nhập" required className="px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white font-mono" />
-                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" required className="px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white" />
+                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" required readOnly={Boolean(editing)} className="px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white read-only:opacity-60 read-only:cursor-not-allowed" />
                 {!editing && <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Mật khẩu (ít nhất 8 ký tự)" required className="px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white" />}
                 <input value={rank} onChange={(e) => setRank(e.target.value)} placeholder="Cấp bậc" className="px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white" />
                 <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Chức vụ" className="px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white" />
