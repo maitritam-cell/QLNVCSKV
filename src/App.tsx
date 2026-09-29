@@ -48,6 +48,7 @@ import { AccountManagementModal } from './components/AccountManagementModal';
 import { ManageTaskCategoriesModal } from './components/ManageTaskCategoriesModal';
 import { ResidentialGroupModal } from './components/ResidentialGroupModal';
 import { ExcelImportExportModal } from './components/ExcelImportExportModal';
+import { OfflineIndicator } from './components/OfflineIndicator';
 import {
   initializeFirestoreSync,
   subscribeSyncStatus,
@@ -557,6 +558,9 @@ export function App() {
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col font-sans text-slate-900 antialiased selection:bg-red-500 selection:text-white">
+      {/* PWA Offline Indicator */}
+      <OfflineIndicator />
+
       {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed bottom-5 right-5 z-50 flex items-center gap-2 bg-slate-900 text-white px-4 py-2.5 rounded-xl shadow-2xl border border-slate-700 text-xs font-semibold animate-in slide-in-from-bottom duration-300">
@@ -586,9 +590,8 @@ export function App() {
 
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-5">
-        {/* Cloud Database Persistence Banner */}
-        {!isCloudBannerDismissed && (
-          <div className="mb-4 p-3 rounded-2xl bg-gradient-to-r from-emerald-950 via-slate-900 to-blue-950 border border-emerald-500/40 text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg">
+        {false && (
+          <div className="hidden">
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-emerald-400 shrink-0">
                 <Cloud className="w-4 h-4" />

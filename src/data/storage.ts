@@ -55,12 +55,22 @@ export const STORAGE_KEYS = {
 // Cloud storage change hook
 export type StorageChangeHandler = (entity: string, data: any) => void;
 let storageChangeHandler: StorageChangeHandler | null = null;
+let isSyncSuppressed = false;
+
+export function setStorageSyncSuppressed(suppressed: boolean): void {
+  isSyncSuppressed = suppressed;
+}
+
+export function isStorageSyncSuppressed(): boolean {
+  return isSyncSuppressed;
+}
 
 export function registerStorageChangeHandler(handler: StorageChangeHandler) {
   storageChangeHandler = handler;
 }
 
 export function notifyStorageChange(entity: string, data: any) {
+  if (isSyncSuppressed) return;
   if (storageChangeHandler) {
     try {
       storageChangeHandler(entity, data);
@@ -1173,25 +1183,16 @@ export function resetAccountPassword(userId: string, defaultPassword = '123'): b
 }
 
 export function resetAllDataToDefault(): void {
-  if (isCloudReady()) {
-    saveStaffList(INITIAL_STAFF);
-    saveResidentialGroups(DEFAULT_RESIDENTIAL_GROUPS);
-    saveTaskCategories(DEFAULT_TASK_CATEGORIES);
-    saveHkcchList(INITIAL_HKCCH);
-    saveMatuyList(INITIAL_MATUY);
-    saveDcttpList(INITIAL_DCTTP);
-    saveDatdaiList(INITIAL_DATDAI);
-    saveGenericTasksList([]);
-    saveInformationPosts([]);
-    return;
-  }
-
-  localStorage.setItem(STORAGE_KEYS.STAFF, JSON.stringify(INITIAL_STAFF));
-  localStorage.setItem(STORAGE_KEYS.HKCCH, JSON.stringify(INITIAL_HKCCH));
-  localStorage.setItem(STORAGE_KEYS.MATUY, JSON.stringify(INITIAL_MATUY));
-  localStorage.setItem(STORAGE_KEYS.DCTTP, JSON.stringify(INITIAL_DCTTP));
-  localStorage.setItem(STORAGE_KEYS.DATDAI, JSON.stringify(INITIAL_DATDAI));
-  localStorage.setItem(STORAGE_KEYS.ACCOUNTS, JSON.stringify(INITIAL_USER_ACCOUNTS));
+  saveStaffList(INITIAL_STAFF);
+  saveResidentialGroups(DEFAULT_RESIDENTIAL_GROUPS);
+  saveTaskCategories(DEFAULT_TASK_CATEGORIES);
+  saveHkcchList(INITIAL_HKCCH);
+  saveMatuyList(INITIAL_MATUY);
+  saveDcttpList(INITIAL_DCTTP);
+  saveDatdaiList(INITIAL_DATDAI);
+  saveGenericTasksList([]);
+  saveInformationPosts([]);
+  saveUserAccounts(INITIAL_USER_ACCOUNTS);
   localStorage.removeItem(STORAGE_KEYS.DELETED_ACCOUNTS);
   localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
 }

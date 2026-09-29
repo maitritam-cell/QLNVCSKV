@@ -6,7 +6,8 @@ import {
   deleteDoc,
   writeBatch,
   onSnapshot,
-  getDocFromServer
+  getDocFromServer,
+  DocumentReference
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import {
@@ -39,7 +40,8 @@ import {
   saveTaskCategories,
   getUserAccounts,
   saveUserAccounts,
-  registerStorageChangeHandler
+  registerStorageChangeHandler,
+  setStorageSyncSuppressed
 } from '../data/storage';
 
 export interface CloudSyncStatus {
@@ -60,63 +62,85 @@ let currentStatus: CloudSyncStatus = {
 
 const statusListeners: Array<(status: CloudSyncStatus) => void> = [];
 
+/**
+ * Synchronizes a client collection to Firestore:
+ * - Upserts all items currently present in `items`
+ * - DELETES any document in Firestore that was removed by the user
+ */
+async function syncCollectionWithFirestore(
+  collectionName: string,
+  items: any[],
+  getId: (item: any) => string
+): Promise<void> {
+  const desiredMap = new Map<string, any>();
+  for (const item of items) {
+    desiredMap.set(getId(item), item);
+  }
+
+  // 1. Fetch current documents in Firestore
+  const snap = await getDocs(collection(db, collectionName));
+  const docsToDelete: DocumentReference[] = [];
+
+  for (const docSnap of snap.docs) {
+    if (!desiredMap.has(docSnap.id)) {
+      docsToDelete.push(docSnap.ref);
+    }
+  }
+
+  // 2. Commit batch operations (max 400 per batch)
+  let batch = writeBatch(db);
+  let opCount = 0;
+
+  for (const docRef of docsToDelete) {
+    batch.delete(docRef);
+    opCount++;
+    if (opCount >= 400) {
+      await batch.commit();
+      batch = writeBatch(db);
+      opCount = 0;
+    }
+  }
+
+  for (const [id, item] of desiredMap.entries()) {
+    batch.set(doc(db, collectionName, id), item);
+    opCount++;
+    if (opCount >= 400) {
+      await batch.commit();
+      batch = writeBatch(db);
+      opCount = 0;
+    }
+  }
+
+  if (opCount > 0) {
+    await batch.commit();
+  }
+}
+
 // Automatic background sync hook to Firestore on every storage mutation
 registerStorageChangeHandler(async (entity, data) => {
   try {
     if (entity === 'residential_groups' && Array.isArray(data)) {
-      const batch = writeBatch(db);
-      for (const item of data) {
-        batch.set(doc(db, 'residential_groups', item.id), item);
-      }
-      await batch.commit();
+      await syncCollectionWithFirestore('residential_groups', data, (item) => item.id);
     } else if (entity === 'staff' && Array.isArray(data)) {
-      const batch = writeBatch(db);
-      for (const item of data) {
-        batch.set(doc(db, 'staff', item.id), item);
-      }
-      await batch.commit();
+      await syncCollectionWithFirestore('staff', data, (item) => item.id);
     } else if (entity === 'hkcch' && Array.isArray(data)) {
-      const batch = writeBatch(db);
-      for (const item of data) {
-        batch.set(doc(db, 'hkcch', `hk_${item.stt}`), item);
-      }
-      await batch.commit();
+      await syncCollectionWithFirestore('hkcch', data, (item) => `hk_${item.stt}`);
     } else if (entity === 'matuy' && Array.isArray(data)) {
-      const batch = writeBatch(db);
-      for (const item of data) {
-        batch.set(doc(db, 'matuy', `mt_${item.stt}`), item);
-      }
-      await batch.commit();
+      await syncCollectionWithFirestore('matuy', data, (item) => `mt_${item.stt}`);
     } else if (entity === 'dcttp' && Array.isArray(data)) {
-      const batch = writeBatch(db);
-      for (const item of data) {
-        batch.set(doc(db, 'dcttp', `dc_${item.stt}`), item);
-      }
-      await batch.commit();
+      await syncCollectionWithFirestore('dcttp', data, (item) => `dc_${item.stt}`);
     } else if (entity === 'datdai' && Array.isArray(data)) {
-      const batch = writeBatch(db);
-      for (const item of data) {
-        batch.set(doc(db, 'datdai', `dd_${item.stt}`), item);
-      }
-      await batch.commit();
+      await syncCollectionWithFirestore('datdai', data, (item) => `dd_${item.stt}`);
     } else if (entity === 'generic_tasks' && Array.isArray(data)) {
-      const batch = writeBatch(db);
-      for (const item of data) {
-        batch.set(doc(db, 'generic_tasks', `gen_${item.taskType}_${item.stt}`), item);
-      }
-      await batch.commit();
+      await syncCollectionWithFirestore(
+        'generic_tasks',
+        data,
+        (item) => `gen_${item.taskType}_${item.stt}`
+      );
     } else if (entity === 'task_categories' && Array.isArray(data)) {
-      const batch = writeBatch(db);
-      for (const item of data) {
-        batch.set(doc(db, 'task_categories', item.id), item);
-      }
-      await batch.commit();
+      await syncCollectionWithFirestore('task_categories', data, (item) => item.id);
     } else if (entity === 'accounts' && Array.isArray(data)) {
-      const batch = writeBatch(db);
-      for (const item of data) {
-        batch.set(doc(db, 'accounts', item.id), item);
-      }
-      await batch.commit();
+      await syncCollectionWithFirestore('accounts', data, (item) => item.id);
     }
     updateStatus({ lastSyncedAt: new Date() });
   } catch (err) {
@@ -193,75 +217,30 @@ export async function initializeFirestoreSync(onRemoteUpdate?: () => void): Prom
 }
 
 /**
- * Uploads all local data to Firestore cloud database
+ * Uploads all local data to Firestore cloud database and deletes any stale documents
  */
 export async function uploadAllLocalDataToFirestore(): Promise<void> {
   updateStatus({ isSyncing: true });
   try {
-    const batch = writeBatch(db);
+    await syncCollectionWithFirestore('staff', getStaffList(), (item) => item.id);
+    await syncCollectionWithFirestore('residential_groups', getResidentialGroups(), (item) => item.id);
+    await syncCollectionWithFirestore('task_categories', getTaskCategories(), (item) => item.id);
+    await syncCollectionWithFirestore('accounts', getUserAccounts(), (item) => item.id);
+    await syncCollectionWithFirestore('hkcch', getHkcchList(), (item) => `hk_${item.stt}`);
+    await syncCollectionWithFirestore('matuy', getMatuyList(), (item) => `mt_${item.stt}`);
+    await syncCollectionWithFirestore('dcttp', getDcttpList(), (item) => `dc_${item.stt}`);
+    await syncCollectionWithFirestore('datdai', getDatdaiList(), (item) => `dd_${item.stt}`);
+    await syncCollectionWithFirestore(
+      'generic_tasks',
+      getGenericTasksList(),
+      (item) => `gen_${item.taskType}_${item.stt}`
+    );
 
-    // 1. Staff
-    const staff = getStaffList();
-    for (const item of staff) {
-      batch.set(doc(db, 'staff', item.id), item);
-    }
-
-    // 2. Residential Groups
-    const groups = getResidentialGroups();
-    for (const item of groups) {
-      batch.set(doc(db, 'residential_groups', item.id), item);
-    }
-
-    // 3. Task Categories
-    const categories = getTaskCategories();
-    for (const item of categories) {
-      batch.set(doc(db, 'task_categories', item.id), item);
-    }
-
-    // 4. Accounts
-    const accounts = getUserAccounts();
-    for (const item of accounts) {
-      batch.set(doc(db, 'accounts', item.id), item);
-    }
-
-    // 5. HKCCH
-    const hkcch = getHkcchList();
-    for (const item of hkcch) {
-      batch.set(doc(db, 'hkcch', `hk_${item.stt}`), item);
-    }
-
-    // 6. Matuy
-    const matuy = getMatuyList();
-    for (const item of matuy) {
-      batch.set(doc(db, 'matuy', `mt_${item.stt}`), item);
-    }
-
-    // 7. DCTTP
-    const dcttp = getDcttpList();
-    for (const item of dcttp) {
-      batch.set(doc(db, 'dcttp', `dc_${item.stt}`), item);
-    }
-
-    // 8. Datdai
-    const datdai = getDatdaiList();
-    for (const item of datdai) {
-      batch.set(doc(db, 'datdai', `dd_${item.stt}`), item);
-    }
-
-    // 9. Generic Tasks
-    const genericTasks = getGenericTasksList();
-    for (const item of genericTasks) {
-      batch.set(doc(db, 'generic_tasks', `gen_${item.taskType}_${item.stt}`), item);
-    }
-
-    // App state metadata
-    batch.set(doc(db, 'app_state', 'metadata'), {
+    await setDoc(doc(db, 'app_state', 'metadata'), {
       syncedAt: new Date().toISOString(),
       version: '1.0.0',
       description: 'Hệ thống Quản lý Nhiệm vụ Công tác Công an Phường'
     });
-
-    await batch.commit();
 
     updateStatus({
       isConnected: true,
@@ -275,11 +254,24 @@ export async function uploadAllLocalDataToFirestore(): Promise<void> {
   }
 }
 
+export async function syncAllLocalToFirestore(): Promise<{ ok: boolean; message: string }> {
+  try {
+    await uploadAllLocalDataToFirestore();
+    return { ok: true, message: 'Đã đồng bộ sạch sẽ dữ liệu hiện tại lên máy chủ Cloud!' };
+  } catch (err) {
+    return {
+      ok: false,
+      message: 'Không thể đồng bộ: ' + (err instanceof Error ? err.message : String(err))
+    };
+  }
+}
+
 /**
  * Pulls all records from Firestore down into client storage
  */
 export async function pullAllDataFromFirestore(): Promise<void> {
   updateStatus({ isSyncing: true });
+  setStorageSyncSuppressed(true);
   try {
     // 1. Staff
     const staffSnap = await getDocs(collection(db, 'staff'));
@@ -309,40 +301,30 @@ export async function pullAllDataFromFirestore(): Promise<void> {
       saveUserAccounts(accounts);
     }
 
-    // 5. Tasks
+    // 5. Tasks - load the exact collection snapshot from Firestore
     const hkcchSnap = await getDocs(collection(db, 'hkcch'));
-    if (!hkcchSnap.empty) {
-      const list = hkcchSnap.docs.map((d) => d.data() as HKCCHRecord);
-      list.sort((a, b) => a.stt - b.stt);
-      saveHkcchList(list);
-    }
+    const hkList = hkcchSnap.docs.map((d) => d.data() as HKCCHRecord);
+    hkList.sort((a, b) => a.stt - b.stt);
+    saveHkcchList(hkList);
 
     const matuySnap = await getDocs(collection(db, 'matuy'));
-    if (!matuySnap.empty) {
-      const list = matuySnap.docs.map((d) => d.data() as MaTuyRecord);
-      list.sort((a, b) => a.stt - b.stt);
-      saveMatuyList(list);
-    }
+    const mtList = matuySnap.docs.map((d) => d.data() as MaTuyRecord);
+    mtList.sort((a, b) => a.stt - b.stt);
+    saveMatuyList(mtList);
 
     const dcttpSnap = await getDocs(collection(db, 'dcttp'));
-    if (!dcttpSnap.empty) {
-      const list = dcttpSnap.docs.map((d) => d.data() as DCTTPRecord);
-      list.sort((a, b) => a.stt - b.stt);
-      saveDcttpList(list);
-    }
+    const dcList = dcttpSnap.docs.map((d) => d.data() as DCTTPRecord);
+    dcList.sort((a, b) => a.stt - b.stt);
+    saveDcttpList(dcList);
 
     const datdaiSnap = await getDocs(collection(db, 'datdai'));
-    if (!datdaiSnap.empty) {
-      const list = datdaiSnap.docs.map((d) => d.data() as DatDaiRecord);
-      list.sort((a, b) => a.stt - b.stt);
-      saveDatdaiList(list);
-    }
+    const ddList = datdaiSnap.docs.map((d) => d.data() as DatDaiRecord);
+    ddList.sort((a, b) => a.stt - b.stt);
+    saveDatdaiList(ddList);
 
     const genSnap = await getDocs(collection(db, 'generic_tasks'));
-    if (!genSnap.empty) {
-      const list = genSnap.docs.map((d) => d.data() as GenericTaskRecord);
-      saveGenericTasksList(list);
-    }
+    const genList = genSnap.docs.map((d) => d.data() as GenericTaskRecord);
+    saveGenericTasksList(genList);
 
     updateStatus({
       isConnected: true,
@@ -353,6 +335,8 @@ export async function pullAllDataFromFirestore(): Promise<void> {
   } catch (error) {
     updateStatus({ isSyncing: false });
     handleFirestoreError(error, OperationType.GET, 'all_collections');
+  } finally {
+    setStorageSyncSuppressed(false);
   }
 }
 
@@ -364,9 +348,11 @@ function setupRealtimeListeners(onRemoteUpdate?: () => void) {
   onSnapshot(
     collection(db, 'residential_groups'),
     (snap) => {
-      if (!snap.empty) {
-        const groups = snap.docs.map((d) => d.data() as ResidentialGroup);
+      const groups = snap.docs.map((d) => d.data() as ResidentialGroup);
+      if (groups.length > 0) {
+        setStorageSyncSuppressed(true);
         saveResidentialGroups(groups);
+        setStorageSyncSuppressed(false);
         updateStatus({ lastSyncedAt: new Date() });
         if (onRemoteUpdate) onRemoteUpdate();
       }
@@ -380,9 +366,11 @@ function setupRealtimeListeners(onRemoteUpdate?: () => void) {
   onSnapshot(
     collection(db, 'staff'),
     (snap) => {
-      if (!snap.empty) {
-        const staffList = snap.docs.map((d) => d.data() as Staff);
+      const staffList = snap.docs.map((d) => d.data() as Staff);
+      if (staffList.length > 0) {
+        setStorageSyncSuppressed(true);
         saveStaffList(staffList);
+        setStorageSyncSuppressed(false);
         updateStatus({ lastSyncedAt: new Date() });
         if (onRemoteUpdate) onRemoteUpdate();
       }
@@ -392,68 +380,105 @@ function setupRealtimeListeners(onRemoteUpdate?: () => void) {
     }
   );
 
-  // Listen to tasks
+  // Listen to task categories
   onSnapshot(
-    collection(db, 'hkcch'),
+    collection(db, 'task_categories'),
     (snap) => {
-      if (!snap.empty) {
-        const list = snap.docs.map((d) => d.data() as HKCCHRecord);
-        list.sort((a, b) => a.stt - b.stt);
-        saveHkcchList(list);
+      const categories = snap.docs.map((d) => d.data() as TaskCategoryConfig);
+      if (categories.length > 0) {
+        setStorageSyncSuppressed(true);
+        saveTaskCategories(categories);
+        setStorageSyncSuppressed(false);
         updateStatus({ lastSyncedAt: new Date() });
         if (onRemoteUpdate) onRemoteUpdate();
       }
+    },
+    (err) => {
+      handleFirestoreError(err, OperationType.GET, 'task_categories');
+    }
+  );
+
+  // Listen to HKCCH
+  onSnapshot(
+    collection(db, 'hkcch'),
+    (snap) => {
+      const list = snap.docs.map((d) => d.data() as HKCCHRecord);
+      list.sort((a, b) => a.stt - b.stt);
+      setStorageSyncSuppressed(true);
+      saveHkcchList(list);
+      setStorageSyncSuppressed(false);
+      updateStatus({ lastSyncedAt: new Date() });
+      if (onRemoteUpdate) onRemoteUpdate();
     },
     (err) => {
       handleFirestoreError(err, OperationType.GET, 'hkcch');
     }
   );
 
+  // Listen to Ma Tuy
   onSnapshot(
     collection(db, 'matuy'),
     (snap) => {
-      if (!snap.empty) {
-        const list = snap.docs.map((d) => d.data() as MaTuyRecord);
-        list.sort((a, b) => a.stt - b.stt);
-        saveMatuyList(list);
-        updateStatus({ lastSyncedAt: new Date() });
-        if (onRemoteUpdate) onRemoteUpdate();
-      }
+      const list = snap.docs.map((d) => d.data() as MaTuyRecord);
+      list.sort((a, b) => a.stt - b.stt);
+      setStorageSyncSuppressed(true);
+      saveMatuyList(list);
+      setStorageSyncSuppressed(false);
+      updateStatus({ lastSyncedAt: new Date() });
+      if (onRemoteUpdate) onRemoteUpdate();
     },
     (err) => {
       handleFirestoreError(err, OperationType.GET, 'matuy');
     }
   );
 
+  // Listen to DCTTP
   onSnapshot(
     collection(db, 'dcttp'),
     (snap) => {
-      if (!snap.empty) {
-        const list = snap.docs.map((d) => d.data() as DCTTPRecord);
-        list.sort((a, b) => a.stt - b.stt);
-        saveDcttpList(list);
-        updateStatus({ lastSyncedAt: new Date() });
-        if (onRemoteUpdate) onRemoteUpdate();
-      }
+      const list = snap.docs.map((d) => d.data() as DCTTPRecord);
+      list.sort((a, b) => a.stt - b.stt);
+      setStorageSyncSuppressed(true);
+      saveDcttpList(list);
+      setStorageSyncSuppressed(false);
+      updateStatus({ lastSyncedAt: new Date() });
+      if (onRemoteUpdate) onRemoteUpdate();
     },
     (err) => {
       handleFirestoreError(err, OperationType.GET, 'dcttp');
     }
   );
 
+  // Listen to Dat Dai
   onSnapshot(
     collection(db, 'datdai'),
     (snap) => {
-      if (!snap.empty) {
-        const list = snap.docs.map((d) => d.data() as DatDaiRecord);
-        list.sort((a, b) => a.stt - b.stt);
-        saveDatdaiList(list);
-        updateStatus({ lastSyncedAt: new Date() });
-        if (onRemoteUpdate) onRemoteUpdate();
-      }
+      const list = snap.docs.map((d) => d.data() as DatDaiRecord);
+      list.sort((a, b) => a.stt - b.stt);
+      setStorageSyncSuppressed(true);
+      saveDatdaiList(list);
+      setStorageSyncSuppressed(false);
+      updateStatus({ lastSyncedAt: new Date() });
+      if (onRemoteUpdate) onRemoteUpdate();
     },
     (err) => {
       handleFirestoreError(err, OperationType.GET, 'datdai');
+    }
+  );
+
+  // Listen to Generic Tasks
+  onSnapshot(
+    collection(db, 'generic_tasks'),
+    (snap) => {
+      const list = snap.docs.map((d) => d.data() as GenericTaskRecord);
+      setStorageSyncSuppressed(true);
+      saveGenericTasksList(list);
+      setStorageSyncSuppressed(false);
+      updateStatus({ lastSyncedAt: new Date() });
+      if (onRemoteUpdate) onRemoteUpdate();
+    },
+    (err) => {
+      handleFirestoreError(err, OperationType.GET, 'generic_tasks');
     }
   );
 }

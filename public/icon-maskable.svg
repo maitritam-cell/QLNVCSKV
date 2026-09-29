@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#991b1b" />
+      <stop offset="100%" stop-color="#450a0a" />
+    </linearGradient>
+    <linearGradient id="shieldGradM" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ef4444" />
+      <stop offset="50%" stop-color="#b91c1c" />
+      <stop offset="100%" stop-color="#7f1d1d" />
+    </linearGradient>
+    <linearGradient id="goldGradM" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fef08a" />
+      <stop offset="50%" stop-color="#fbbf24" />
+      <stop offset="100%" stop-color="#d97706" />
+    </linearGradient>
+    <filter id="mShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#000000" flood-opacity="0.5" />
+    </filter>
+  </defs>
+
+  <!-- Full-bleed background -->
+  <rect width="512" height="512" fill="url(#bgGrad)" />
+
+  <!-- Inner safe zone: Scaled to 74% and centered at (256, 256) -->
+  <g transform="translate(256, 256) scale(0.72) translate(-256, -256)">
+    <!-- Outer Shield -->
+    <path d="M256 32 L430 88 C430 260 360 410 256 476 C152 410 82 260 82 88 Z" 
+          fill="url(#shieldGradM)" 
+          stroke="url(#goldGradM)" 
+          stroke-width="14" 
+          stroke-linejoin="round"
+          filter="url(#mShadow)" />
+
+    <!-- Central Gold Star -->
+    <g transform="translate(256, 230) scale(0.95)" filter="url(#mShadow)">
+      <polygon points="0,-100 29,-32 100,-28 46,18 64,88 0,50 -64,88 -46,18 -100,-28 -29,-32" 
+               fill="url(#goldGradM)" 
+               stroke="#b45309" 
+               stroke-width="4" />
+    </g>
+
+    <!-- Wreath base -->
+    <path d="M170 330 C200 370 312 370 342 330" 
+          fill="none" 
+          stroke="url(#goldGradM)" 
+          stroke-width="10" 
+          stroke-linecap="round" />
+    <circle cx="256" cy="355" r="9" fill="#fbbf24" />
+  </g>
+</svg>

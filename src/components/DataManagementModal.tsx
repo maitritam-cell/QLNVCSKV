@@ -71,25 +71,24 @@ export const DataManagementModal: React.FC<DataManagementModalProps> = ({
 
   const handleMigrateToCloud = async () => {
     if (!isAdmin || isMigrating) return;
-    if (!window.confirm('Chuyển toàn bộ dữ liệu đang lưu trên thiết bị này lên cơ sở dữ liệu Cloud? Dữ liệu Cloud hiện có của QLNVCSKV có thể bị cập nhật theo dữ liệu trên thiết bị. Hãy sao lưu JSON trước khi thực hiện.')) return;
+    if (!window.confirm('Đồng bộ sạch sẽ toàn bộ dữ liệu trên thiết bị này lên Cloud Firestore? Mọi chỉ tiêu đã xóa trên thiết bị sẽ được xóa triệt để khỏi máy chủ Cloud.')) return;
 
     setIsMigrating(true);
     try {
-      const { migrateLocalDataToCloud } = await import('../data/storage');
-      const result = await migrateLocalDataToCloud();
+      const { syncAllLocalToFirestore } = await import('../services/firestoreSync');
+      const result = await syncAllLocalToFirestore();
       setFeedbackMessage({
         type: result.ok ? 'success' : 'error',
         text: result.message
       });
       if (result.ok) {
-        localStorage.setItem('qlnv_cloud_migration_done', '1');
         onDataChanged();
       }
     } catch (error) {
       console.error(error);
       setFeedbackMessage({
         type: 'error',
-        text: 'Không thể chuyển dữ liệu lên Cloud.'
+        text: 'Không thể đồng bộ dữ liệu lên Cloud Firestore.'
       });
     } finally {
       setIsMigrating(false);
@@ -241,9 +240,9 @@ export const DataManagementModal: React.FC<DataManagementModalProps> = ({
                     <Cloud className="w-4 h-4" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h4 className="text-xs font-bold text-indigo-950">Chuyển dữ liệu cũ lên Cloud</h4>
+                    <h4 className="text-xs font-bold text-indigo-950">Đồng bộ sạch sẽ lên Cloud Firestore</h4>
                     <p className="text-[11px] text-indigo-700 mt-0.5">
-                      Đẩy cán bộ, Tổ dân phố, chỉ tiêu, nhiệm vụ và tài liệu từ thiết bị này lên Supabase để dùng chung.
+                      Cập nhật trạng thái mới nhất từ máy này lên Cloud Firestore (xóa vĩnh viễn các chỉ tiêu/nhiệm vụ đã bị xóa trên máy chủ).
                     </p>
                     <p className="text-[10px] text-indigo-600 mt-1 font-semibold">
                       Khuyến nghị: bấm “Xuất file” trước khi chuyển.
@@ -257,7 +256,7 @@ export const DataManagementModal: React.FC<DataManagementModalProps> = ({
                     className="flex items-center gap-1.5 px-3 py-2 bg-indigo-700 hover:bg-indigo-800 disabled:opacity-50 text-white rounded-lg text-xs font-bold transition shadow-xs shrink-0"
                   >
                     <ArrowUpFromLine className={`w-3.5 h-3.5 ${isMigrating ? 'animate-bounce' : ''}`} />
-                    <span>{isMigrating ? 'Đang chuyển...' : 'Chuyển lên Cloud'}</span>
+                    <span>{isMigrating ? 'Đang đồng bộ...' : 'Đồng bộ Firestore'}</span>
                   </button>
                 </div>
               </div>

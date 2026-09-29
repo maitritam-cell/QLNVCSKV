@@ -20,8 +20,10 @@ import {
   AlertCircle,
   RefreshCw,
   Home,
-  Check
+  Check,
+  FileSpreadsheet
 } from 'lucide-react';
+import { ResidentialGroupExcelModal } from './ResidentialGroupExcelModal';
 
 interface ResidentialGroupModalProps {
   isOpen: boolean;
@@ -50,6 +52,7 @@ export const ResidentialGroupModal: React.FC<ResidentialGroupModalProps> = ({
 
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [isReclassifying, setIsReclassifying] = useState(false);
+  const [isExcelModalOpen, setIsExcelModalOpen] = useState(false);
 
   if (!isOpen) return null;
 
@@ -198,13 +201,23 @@ export const ResidentialGroupModal: React.FC<ResidentialGroupModalProps> = ({
           <div className="flex items-center gap-2 flex-wrap">
             <button
               type="button"
+              id="btn-open-excel-residential-config"
+              onClick={() => setIsExcelModalOpen(true)}
+              className="px-3 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-xs shadow-md transition flex items-center gap-1.5 active:scale-95 cursor-pointer"
+              title="Nhập và cập nhật cấu hình danh sách Tổ dân phố từ file Excel"
+            >
+              <FileSpreadsheet className="w-4 h-4 text-emerald-200" />
+              <span>Cập nhật từ Excel</span>
+            </button>
+            <button
+              type="button"
               onClick={handleReclassifyAll}
               disabled={isReclassifying}
               className="px-3 py-1.5 rounded-xl bg-blue-900/60 hover:bg-blue-800 text-blue-200 border border-blue-700/60 text-xs font-bold transition flex items-center gap-1.5 shadow-sm active:scale-95 disabled:opacity-50"
               title="Tự động quét toàn bộ chỉ tiêu và gán cho cán bộ đang phụ trách Tổ dân phố đó"
             >
               <RefreshCw className={`w-3.5 h-3.5 text-blue-400 ${isReclassifying ? 'animate-spin' : ''}`} />
-              <span>Tự động phân loại chỉ tiêu theo Tổ</span>
+              <span>Tự động phân loại theo Tổ</span>
             </button>
             <button
               type="button"
@@ -215,7 +228,7 @@ export const ResidentialGroupModal: React.FC<ResidentialGroupModalProps> = ({
               className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white font-bold text-xs shadow-md transition flex items-center gap-1.5 active:scale-95"
             >
               <Plus className="w-4 h-4" />
-              <span>{isAdding ? 'Đóng biểu mẫu' : 'Thêm Tổ Dân Phố Mới'}</span>
+              <span>{isAdding ? 'Đóng biểu mẫu' : 'Thêm Tổ Mới'}</span>
             </button>
           </div>
         </div>
@@ -466,6 +479,17 @@ export const ResidentialGroupModal: React.FC<ResidentialGroupModalProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Excel Configuration Sub-Modal */}
+      <ResidentialGroupExcelModal
+        isOpen={isExcelModalOpen}
+        onClose={() => setIsExcelModalOpen(false)}
+        staffList={staffList}
+        onDataUpdated={() => {
+          refreshList();
+          onDataUpdated();
+        }}
+      />
     </div>
   );
 };

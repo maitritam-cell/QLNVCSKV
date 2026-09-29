@@ -12,10 +12,10 @@ import {
   ChevronDown,
   ShieldAlert,
   ArrowRightLeft,
-  Building,
-  Cloud
+  Building
 } from 'lucide-react';
 import { UserAccount } from '../types';
+import { PWAInstallButton } from './PWAInstallButton';
 
 interface NavbarProps {
   currentTab: 'update' | 'dashboard' | 'staff';
@@ -171,20 +171,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           )}
 
-          {/* Cloud Database Persistence Badge */}
-          <div
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[10px] font-bold border transition ${
-              cloudConnected
-                ? 'bg-emerald-950/70 border-emerald-600/50 text-emerald-300'
-                : 'bg-amber-950/70 border-amber-600/50 text-amber-300'
-            }`}
-            title={cloudConnected ? 'Cơ sở dữ liệu đám mây Firestore: Trực tuyến & Đã đồng bộ' : 'Đang kết nối Firestore...'}
-          >
-            <Cloud className={`w-3.5 h-3.5 ${cloudSyncing ? 'animate-bounce text-emerald-400' : 'text-emerald-400'}`} />
-            <span className="hidden lg:inline">Đám mây Firestore</span>
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-          </div>
-
+          {/* In-App PWA Install Button */}
+          <PWAInstallButton variant="navbar" />
           {/* User Profile / Login status */}
           <div className="relative" ref={menuRef}>
             {currentUser ? (

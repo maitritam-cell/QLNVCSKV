@@ -20,6 +20,8 @@ import {
   loginWithCloudIdentifier,
   signUpFirstCloudAdmin
 } from '../services/cloudAuth';
+import { PWAInstallButton } from './PWAInstallButton';
+import { OfflineIndicator } from './OfflineIndicator';
 
 interface LoginViewProps {
   onLoginSuccess: (user: UserAccount) => void;
@@ -162,15 +164,20 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
             </div>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={openSetup}
-          className="text-xs text-amber-300 hover:text-amber-200 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition border border-white/10"
-        >
-          <KeyRound className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">Khởi tạo Cloud</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <PWAInstallButton variant="navbar" />
+          <button
+            type="button"
+            onClick={openSetup}
+            className="text-xs text-amber-300 hover:text-amber-200 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition border border-white/10 cursor-pointer"
+          >
+            <KeyRound className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Khởi tạo Cloud</span>
+          </button>
+        </div>
       </div>
+
+      <OfflineIndicator />
 
       <div className="max-w-md w-full mx-auto my-auto py-6">
         <div className="bg-slate-900/95 backdrop-blur-md rounded-3xl border border-red-500/30 shadow-2xl overflow-hidden">
