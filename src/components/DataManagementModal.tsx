@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Download, Upload, RotateCcw, AlertTriangle, CheckCircle2, FileSpreadsheet, Building } from 'lucide-react';
+import { X, Download, Upload, RotateCcw, AlertTriangle, CheckCircle2, FileSpreadsheet, Building, Cloud, ArrowUpFromLine } from 'lucide-react';
 import {
   getStaffList,
   getHkcchList,
@@ -19,6 +19,7 @@ interface DataManagementModalProps {
   onDataChanged: () => void;
   onOpenExcelModal?: () => void;
   onOpenResidentialModal?: () => void;
+  isAdmin?: boolean;
 }
 
 export const DataManagementModal: React.FC<DataManagementModalProps> = ({
@@ -26,9 +27,11 @@ export const DataManagementModal: React.FC<DataManagementModalProps> = ({
   onClose,
   onDataChanged,
   onOpenExcelModal,
-  onOpenResidentialModal
+  onOpenResidentialModal,
+  isAdmin = false
 }) => {
   const [feedbackMessage, setFeedbackMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [isMigrating, setIsMigrating] = useState(false);
 
   if (!isOpen) return null;
 
@@ -63,6 +66,33 @@ export const DataManagementModal: React.FC<DataManagementModalProps> = ({
         type: 'error',
         text: 'Lỗi khi xuất dữ liệu',
       });
+    }
+  };
+
+  const handleMigrateToCloud = async () => {
+    if (!isAdmin || isMigrating) return;
+    if (!window.confirm('Chuyển toàn bộ dữ liệu đang lưu trên thiết bị này lên cơ sở dữ liệu Cloud? Dữ liệu Cloud hiện có của QLNVCSKV có thể bị cập nhật theo dữ liệu trên thiết bị. Hãy sao lưu JSON trước khi thực hiện.')) return;
+
+    setIsMigrating(true);
+    try {
+      const { migrateLocalDataToCloud } = await import('../data/storage');
+      const result = await migrateLocalDataToCloud();
+      setFeedbackMessage({
+        type: result.ok ? 'success' : 'error',
+        text: result.message
+      });
+      if (result.ok) {
+        localStorage.setItem('qlnv_cloud_migration_done', '1');
+        onDataChanged();
+      }
+    } catch (error) {
+      console.error(error);
+      setFeedbackMessage({
+        type: 'error',
+        text: 'Không thể chuyển dữ liệu lên Cloud.'
+      });
+    } finally {
+      setIsMigrating(false);
     }
   };
 
@@ -200,6 +230,36 @@ export const DataManagementModal: React.FC<DataManagementModalProps> = ({
                   <Building className="w-3.5 h-3.5" />
                   <span>Quản lý Tổ</span>
                 </button>
+              </div>
+            )}
+
+            {/* Migrate local data to central database */}
+            {isAdmin && (
+              <div className="p-3.5 bg-indigo-50/70 rounded-xl border border-indigo-200">
+                <div className="flex items-start gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0">
+                    <Cloud className="w-4 h-4" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-xs font-bold text-indigo-950">Chuyển dữ liệu cũ lên Cloud</h4>
+                    <p className="text-[11px] text-indigo-700 mt-0.5">
+                      Đẩy cán bộ, Tổ dân phố, chỉ tiêu, nhiệm vụ và tài liệu từ thiết bị này lên Supabase để dùng chung.
+                    </p>
+                    <p className="text-[10px] text-indigo-600 mt-1 font-semibold">
+                      Khuyến nghị: bấm “Xuất file” trước khi chuyển.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    id="btn-migrate-local-to-cloud"
+                    onClick={handleMigrateToCloud}
+                    disabled={isMigrating}
+                    className="flex items-center gap-1.5 px-3 py-2 bg-indigo-700 hover:bg-indigo-800 disabled:opacity-50 text-white rounded-lg text-xs font-bold transition shadow-xs shrink-0"
+                  >
+                    <ArrowUpFromLine className={`w-3.5 h-3.5 ${isMigrating ? 'animate-bounce' : ''}`} />
+                    <span>{isMigrating ? 'Đang chuyển...' : 'Chuyển lên Cloud'}</span>
+                  </button>
+                </div>
               </div>
             )}
 
