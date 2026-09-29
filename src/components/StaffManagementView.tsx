@@ -100,6 +100,8 @@ export const StaffManagementView: React.FC<StaffManagementViewProps> = ({
   const [assignNamSinh, setAssignNamSinh] = useState('1990');
   const [assignDiaChi, setAssignDiaChi] = useState('');
   const [assignNote, setAssignNote] = useState('');
+  const [assignReferenceTitle, setAssignReferenceTitle] = useState('');
+  const [assignReferenceLink, setAssignReferenceLink] = useState('');
 
   // Form states for Reassign Modal
   const [reassignFromId, setReassignFromId] = useState<string>('');
@@ -191,6 +193,8 @@ export const StaffManagementView: React.FC<StaffManagementViewProps> = ({
     setAssignNamSinh('1990');
     setAssignDiaChi('');
     setAssignNote('');
+    setAssignReferenceTitle('');
+    setAssignReferenceLink('');
     setIsAssignModalOpen(true);
   };
 
@@ -220,7 +224,9 @@ export const StaffManagementView: React.FC<StaffManagementViewProps> = ({
       cmnd: assignCmnd.trim(),
       namSinh: assignNamSinh.trim(),
       diaChi: assignDiaChi.trim(),
-      note: assignNote.trim()
+      note: assignNote.trim(),
+      referenceTitle: assignReferenceTitle.trim(),
+      referenceLink: assignReferenceLink.trim()
     };
 
     onAddTaskToStaff(assignTaskType, payload);
@@ -1077,6 +1083,32 @@ export const StaffManagementView: React.FC<StaffManagementViewProps> = ({
                   </div>
                 </>
               )}
+
+              <div className="p-3 rounded-2xl bg-emerald-50/60 border border-emerald-200">
+                <div className="flex items-center gap-2 mb-2">
+                  <BookOpen className="w-4 h-4 text-emerald-700" />
+                  <span className="font-black text-emerald-900">Tài liệu / Link hướng dẫn</span>
+                </div>
+                <div className="space-y-2">
+                  <input
+                    type="text"
+                    value={assignReferenceTitle}
+                    onChange={(e) => setAssignReferenceTitle(e.target.value)}
+                    placeholder="Tên tài liệu, ví dụ: Hướng dẫn nghiệp vụ..."
+                    className="w-full px-3 py-2 rounded-xl bg-white border border-emerald-200"
+                  />
+                  <input
+                    type="url"
+                    value={assignReferenceLink}
+                    onChange={(e) => setAssignReferenceLink(e.target.value)}
+                    placeholder="https://drive.google.com/... hoặc website"
+                    className="w-full px-3 py-2 rounded-xl bg-white border border-emerald-200 font-mono text-xs"
+                  />
+                  <p className="text-[10px] text-emerald-700">
+                    Cán bộ có thể mở trực tiếp liên kết này khi xem nhiệm vụ.
+                  </p>
+                </div>
+              </div>
 
               <div>
                 <label className="font-bold text-slate-700 block mb-1">Ghi chú giao việc:</label>
