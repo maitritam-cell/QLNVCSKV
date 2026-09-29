@@ -52,6 +52,8 @@ export interface HKCCHRecord {
   isDone: boolean;
   updatedAt?: string;
   note?: string;
+  referenceLink?: string;
+  referenceTitle?: string;
 }
 
 export interface MaTuyRecord {
@@ -66,6 +68,8 @@ export interface MaTuyRecord {
   ketQuaTest?: 'Âm tính' | 'Dương tính' | 'Chưa test';
   updatedAt?: string;
   note?: string;
+  referenceLink?: string;
+  referenceTitle?: string;
 }
 
 export interface DCTTPRecord {
@@ -79,6 +83,8 @@ export interface DCTTPRecord {
   isDone: boolean;
   updatedAt?: string;
   note?: string;
+  referenceLink?: string;
+  referenceTitle?: string;
 }
 
 export interface DatDaiRecord {
@@ -98,6 +104,8 @@ export interface DatDaiRecord {
   noInfoReason?: string;
   isDone: boolean;
   updatedAt?: string;
+  referenceLink?: string;
+  referenceTitle?: string;
 }
 
 export interface InformationPost {
@@ -126,6 +134,8 @@ export interface GenericTaskRecord {
   info2?: string;
   updatedAt?: string;
   note?: string;
+  referenceLink?: string;
+  referenceTitle?: string;
 }
 
 export interface TaskStats {
