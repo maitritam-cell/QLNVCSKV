@@ -269,6 +269,12 @@ export async function initializeCloudStorage(): Promise<boolean> {
 export async function persistStaff(list: Staff[]) {
   cloudCache.staff = list;
   if (!cloudCache.ready || cloudCache.role !== 'admin') return;
+  const existing = await supabase.from('nv_staff').select('id');
+  if (existing.data) {
+    const ids = new Set(list.map((s) => s.id));
+    const remove = existing.data.filter((r: any) => !ids.has(r.id)).map((r: any) => r.id);
+    if (remove.length) await supabase.from('nv_staff').delete().in('id', remove);
+  }
   const rows = list.map((s) => ({
     id: s.id,
     name: s.name,
@@ -325,6 +331,35 @@ export async function persistTaskCategories(list: TaskCategoryConfig[]) {
   }));
   const { error } = await supabase.from('nv_task_categories').upsert(rows, { onConflict: 'id' });
   if (error) console.error('Supabase task category save failed', error);
+}
+
+export async function persistGenericTasks(list: GenericTaskRecord[]) {
+  if (!cloudCache.ready) return;
+  cloudCache.genericTasks = list;
+
+  const byType = new Map<string, GenericTaskRecord[]>();
+  list.forEach((record) => {
+    if (!byType.has(record.taskType)) byType.set(record.taskType, []);
+    byType.get(record.taskType)!.push(record);
+  });
+
+  if (cloudCache.role === 'admin') {
+    const current = await supabase.from('nv_task_records').select('stt,task_type');
+    if (current.data) {
+      const wanted = new Set(list.map((r) => `${r.taskType}::${r.stt}`));
+      const remove = current.data.filter(
+        (r: any) => r.task_type !== 'hkcch' && r.task_type !== 'matuy' && r.task_type !== 'dcttp' && r.task_type !== 'datdai'
+          && !wanted.has(`${r.task_type}::${r.stt}`)
+      );
+      for (const row of remove) {
+        await supabase.from('nv_task_records').delete().eq('task_type', row.task_type).eq('stt', row.stt);
+      }
+    }
+  }
+
+  for (const [type, records] of byType) {
+    await persistTaskList(type, records);
+  }
 }
 
 export async function persistTaskList(taskType: string, list: any[]) {
