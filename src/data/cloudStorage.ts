@@ -173,8 +173,27 @@ export async function initializeCloudStorage(): Promise<boolean> {
 
   const claims = sessionClaims(data.session);
   cloudCache.userId = claims.userId;
-  cloudCache.role = claims.role;
-  cloudCache.staffId = claims.staffId;
+
+  // Resolve authorization from the authoritative nv_profiles row.
+  // app_metadata is retained only as a fallback for the initial bootstrap session.
+  const profileResult = await supabase
+    .from('nv_profiles')
+    .select('role,staff_id,active')
+    .eq('id', data.session.user.id)
+    .maybeSingle();
+
+  if (profileResult.data?.active) {
+    cloudCache.role =
+      profileResult.data.role === 'admin'
+        ? 'admin'
+        : profileResult.data.role === 'officer'
+        ? 'officer'
+        : claims.role;
+    cloudCache.staffId = profileResult.data.staff_id || claims.staffId;
+  } else {
+    cloudCache.role = claims.role;
+    cloudCache.staffId = claims.staffId;
+  }
 
   const [categories, staff, groups, tasks, posts] = await Promise.all([
     supabase.from('nv_task_categories').select('*').order('created_at'),
