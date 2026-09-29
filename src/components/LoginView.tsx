@@ -1,288 +1,334 @@
 import React, { useState } from 'react';
 import { UserAccount } from '../types';
-import { authenticateUser, getUserAccounts } from '../data/storage';
 import {
   ShieldCheck,
   Lock,
   User,
-  KeyRound,
   Eye,
   EyeOff,
   AlertCircle,
   LogIn,
   HelpCircle,
-  CheckCircle2
+  Cloud,
+  CheckCircle2,
+  KeyRound,
+  X
 } from 'lucide-react';
+import {
+  completePendingCloudAdmin,
+  getCloudSession,
+  loginWithCloudIdentifier,
+  signUpFirstCloudAdmin
+} from '../services/cloudAuth';
 
 interface LoginViewProps {
   onLoginSuccess: (user: UserAccount) => void;
 }
 
-export const LoginView: React.FC<LoginViewProps> = ({
-  onLoginSuccess
-}) => {
+export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [showHelpModal, setShowHelpModal] = useState(false);
+  const [showSetup, setShowSetup] = useState(false);
 
-  const availableAccounts = getUserAccounts();
-  const adminAccounts = availableAccounts.filter((a) => a.role === 'admin');
-  const officerAccounts = availableAccounts.filter((a) => a.role === 'officer');
+  const [setupToken, setSetupToken] = useState('');
+  const [setupUsername, setSetupUsername] = useState('maitritam');
+  const [setupEmail, setSetupEmail] = useState('');
+  const [setupPassword, setSetupPassword] = useState('');
+  const [setupName, setSetupName] = useState('');
+  const [setupRank, setSetupRank] = useState('Trung tá');
+  const [setupTitle, setSetupTitle] = useState('Chỉ huy trưởng - Quản trị hệ thống');
+  const [setupPhone, setSetupPhone] = useState('');
+  const [setupMessage, setSetupMessage] = useState<string | null>(null);
+  const [setupPending, setSetupPending] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
 
-    setTimeout(() => {
-      const res = authenticateUser(identifier, password);
+    const res = await loginWithCloudIdentifier(identifier, password);
+    setLoading(false);
+
+    if (res.success && res.user) {
+      onLoginSuccess(res.user);
+      return;
+    }
+
+    setError(res.error || 'Đăng nhập không thành công.');
+  };
+
+  const openSetup = () => {
+    setError(null);
+    setSetupMessage(null);
+    setSetupPending(false);
+    setShowSetup(true);
+  };
+
+  const handleSetup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSetupMessage(null);
+    setError(null);
+
+    if (!setupToken.trim()) {
+      setSetupMessage('Vui lòng nhập mã khởi tạo Cloud.');
+      return;
+    }
+    if (!setupEmail.trim()) {
+      setSetupMessage('Vui lòng nhập email quản trị.');
+      return;
+    }
+    if (setupPassword.length < 8) {
+      setSetupMessage('Mật khẩu quản trị Cloud phải có ít nhất 8 ký tự.');
+      return;
+    }
+    if (!setupName.trim()) {
+      setSetupMessage('Vui lòng nhập họ tên quản trị.');
+      return;
+    }
+
+    setLoading(true);
+    const result = await signUpFirstCloudAdmin({
+      token: setupToken.trim(),
+      username: setupUsername.trim(),
+      email: setupEmail.trim(),
+      password: setupPassword,
+      name: setupName.trim(),
+      rank: setupRank.trim(),
+      title: setupTitle.trim(),
+      phone: setupPhone.trim()
+    });
+    setLoading(false);
+
+    if (result.success && result.user) {
+      setShowSetup(false);
+      onLoginSuccess(result.user);
+      return;
+    }
+
+    if (result.success && result.pending) {
+      setSetupPending(true);
+      setSetupMessage(result.message || 'Đã tạo tài khoản. Hãy xác nhận email, sau đó bấm Hoàn tất khởi tạo.');
+      return;
+    }
+
+    setSetupMessage(result.error || 'Không thể khởi tạo quản trị Cloud.');
+  };
+
+  const handleCompleteSetup = async () => {
+    setSetupMessage(null);
+    setLoading(true);
+    const session = await getCloudSession();
+    if (!session) {
       setLoading(false);
-      if (res.success && res.user) {
-        onLoginSuccess(res.user);
-      } else {
-        setError(res.error || 'Đăng nhập không thành công. Vui lòng kiểm tra lại thông tin.');
-      }
-    }, 200);
+      setSetupMessage('Chưa có phiên Supabase Auth. Hãy xác nhận email trước, rồi bấm lại.');
+      return;
+    }
+
+    const result = await completePendingCloudAdmin({
+      token: setupToken.trim(),
+      username: setupUsername.trim(),
+      name: setupName.trim(),
+      rank: setupRank.trim(),
+      title: setupTitle.trim(),
+      phone: setupPhone.trim()
+    });
+    setLoading(false);
+
+    if (result.success && result.user) {
+      setShowSetup(false);
+      onLoginSuccess(result.user);
+      return;
+    }
+    setSetupMessage(result.error || 'Không thể hoàn tất hồ sơ quản trị Cloud.');
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-red-950 flex flex-col justify-between text-slate-100 antialiased p-3 sm:p-6">
-      {/* Top Banner */}
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-red-950 flex flex-col justify-between text-slate-100 antialiased p-3 sm:p-6">
       <div className="max-w-4xl w-full mx-auto flex items-center justify-between py-2 border-b border-white/10">
         <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-amber-400 shadow-inner">
+          <div className="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-amber-400">
             <ShieldCheck className="w-5 h-5" />
           </div>
           <div>
             <div className="text-xs font-black uppercase tracking-wider text-amber-300">
               CÔNG AN PHƯỜNG / XÃ • ĐỀ ÁN 06/BCA
             </div>
-            <div className="text-[10px] text-slate-400">
-              Hệ thống xác thực & kiểm soát truy cập
+            <div className="text-[10px] text-slate-400 flex items-center gap-1">
+              <Cloud className="w-3 h-3 text-emerald-400" />
+              Dữ liệu tập trung trên Supabase
             </div>
           </div>
         </div>
-
         <button
           type="button"
-          onClick={() => setShowHelpModal(true)}
-          className="text-xs text-slate-300 hover:text-amber-300 flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 transition border border-white/10"
+          onClick={openSetup}
+          className="text-xs text-amber-300 hover:text-amber-200 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition border border-white/10"
         >
-          <HelpCircle className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">Danh sách tài khoản & Mật khẩu</span>
+          <KeyRound className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">Khởi tạo Cloud</span>
         </button>
       </div>
 
-      {/* Main Authentication Card */}
       <div className="max-w-md w-full mx-auto my-auto py-6">
-        <div className="bg-slate-900/90 backdrop-blur-md rounded-3xl border border-red-500/30 shadow-2xl shadow-red-950/50 overflow-hidden">
-          {/* Header of Modal */}
-          <div className="bg-gradient-to-r from-red-900 via-red-800 to-amber-900 px-6 py-5 text-center relative border-b border-amber-500/30">
+        <div className="bg-slate-900/95 backdrop-blur-md rounded-3xl border border-red-500/30 shadow-2xl overflow-hidden">
+          <div className="bg-gradient-to-r from-red-900 via-red-800 to-amber-900 px-6 py-5 text-center border-b border-amber-500/30">
             <div className="w-16 h-16 mx-auto rounded-2xl bg-amber-400/20 border-2 border-amber-300/50 flex items-center justify-center mb-3 shadow-lg">
-              <ShieldCheck className="w-10 h-10 text-amber-300 drop-shadow" />
+              <ShieldCheck className="w-10 h-10 text-amber-300" />
             </div>
             <h2 className="text-base sm:text-lg font-black text-white tracking-wide uppercase">
               ĐĂNG NHẬP HỆ THỐNG
             </h2>
             <p className="text-xs text-amber-200/90 font-medium mt-1">
-              Cổng Quản Lý Nhiệm Vụ Công Tác
+              Cổng Quản Lý Nhiệm Vụ Công Tác • Cloud Database
             </p>
           </div>
 
-          {/* Error Banner */}
           {error && (
-            <div className="mx-6 mt-4 p-3 rounded-xl bg-red-950/80 border border-red-600/50 text-red-200 text-xs flex items-start gap-2 animate-in fade-in duration-200">
+            <div className="mx-6 mt-4 p-3 rounded-xl bg-red-950/80 border border-red-600/50 text-red-200 text-xs flex items-start gap-2">
               <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
               <div className="flex-1 leading-relaxed">{error}</div>
             </div>
           )}
 
-          {/* Login Form */}
           <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1.5">
-                  Tên đăng nhập / Số điện thoại / Mã CB
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                    <User className="w-4 h-4" />
-                  </div>
-                  <input
-                    type="text"
-                    id="input-login-username"
-                    required
-                    value={identifier}
-                    onChange={(e) => setIdentifier(e.target.value)}
-                    placeholder="VD: maitritam@gmail.com, maitritam hoặc admin"
-                    className="w-full pl-9 pr-3 py-2.5 bg-slate-950/80 border border-slate-700 rounded-xl text-white text-xs sm:text-sm focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 transition"
-                  />
-                </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                Tên đăng nhập / Email / Số điện thoại
+              </label>
+              <div className="relative">
+                <User className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
+                <input
+                  type="text"
+                  required
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
+                  placeholder="Nhập tài khoản Cloud"
+                  className="w-full pl-9 pr-3 py-2.5 bg-slate-950/80 border border-slate-700 rounded-xl text-white text-xs sm:text-sm focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400"
+                />
               </div>
+            </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1.5">
-                  Mật khẩu
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                    <Lock className="w-4 h-4" />
-                  </div>
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    id="input-login-password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Nhập mật khẩu (Mặc định: 123 hoặc 123456)"
-                    className="w-full pl-9 pr-10 py-2.5 bg-slate-950/80 border border-slate-700 rounded-xl text-white text-xs sm:text-sm focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 transition"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-200"
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-                <div className="flex items-center justify-between mt-1.5 text-[11px] text-slate-400">
-                  <span>Mật khẩu mặc định: <b className="text-amber-300">123</b> hoặc <b className="text-amber-300">123456</b></span>
-                  <button
-                    type="button"
-                    onClick={() => setShowHelpModal(true)}
-                    className="text-amber-400 hover:underline"
-                  >
-                    Xem tài khoản?
-                  </button>
-                </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-300 mb-1.5">Mật khẩu</label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Nhập mật khẩu"
+                  className="w-full pl-9 pr-10 py-2.5 bg-slate-950/80 border border-slate-700 rounded-xl text-white text-xs sm:text-sm focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-200"
+                  aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
               </div>
+            </div>
 
-              <button
-                type="submit"
-                id="btn-submit-login"
-                disabled={loading}
-                className="w-full mt-2 py-3 px-4 bg-gradient-to-r from-red-700 via-red-600 to-amber-600 hover:from-red-600 hover:to-amber-500 text-white font-extrabold text-xs sm:text-sm rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99] disabled:opacity-50"
-              >
-                {loading ? (
-                  <span className="inline-block animate-pulse">Đang kiểm tra bảo mật...</span>
-                ) : (
-                  <>
-                    <LogIn className="w-4 h-4" />
-                    <span>XÁC THỰC & ĐĂNG NHẬP</span>
-                  </>
-                )}
-              </button>
-            </form>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full mt-2 py-3 px-4 bg-gradient-to-r from-red-700 via-red-600 to-amber-600 hover:from-red-600 hover:to-amber-500 text-white font-extrabold text-xs sm:text-sm rounded-xl shadow-lg flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              {loading ? (
+                <span className="animate-pulse">Đang xác thực Cloud...</span>
+              ) : (
+                <>
+                  <LogIn className="w-4 h-4" />
+                  <span>ĐĂNG NHẬP</span>
+                </>
+              )}
+            </button>
+          </form>
 
+          <div className="px-6 pb-6">
+            <div className="p-3 rounded-xl bg-emerald-950/40 border border-emerald-700/40 text-[11px] text-emerald-200">
+              <div className="font-bold flex items-center gap-1.5">
+                <Cloud className="w-3.5 h-3.5" />
+                Dữ liệu dùng chung
+              </div>
+              <p className="mt-1 text-emerald-300/80">
+                Nhiệm vụ, cán bộ, Tổ dân phố, tài liệu và báo cáo được lưu trên cơ sở dữ liệu trung tâm.
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Security Disclaimer Footer */}
-      <div className="max-w-4xl w-full mx-auto text-center py-2 text-[11px] text-slate-400 flex flex-col sm:flex-row items-center justify-between gap-2 border-t border-white/5">
-        <div>
-          Cổng Quản Lý Nhiệm Vụ CAND • Bảo mật cơ sở dữ liệu nội bộ
-        </div>
-        <div className="text-slate-500">
-          Phiên bản 1.0 • Hỗ trợ Đề án 06 Chính phủ
-        </div>
+      <div className="max-w-4xl w-full mx-auto text-center py-2 text-[11px] text-slate-400 border-t border-white/5">
+        Cổng Quản Lý Nhiệm Vụ • Xác thực Supabase Auth • Phân quyền theo hồ sơ Cloud
       </div>
 
-      {/* Account Help Modal */}
-      {showHelpModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-lg w-full p-5 shadow-2xl animate-in zoom-in-95 duration-200">
+      {showSetup && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 overflow-y-auto">
+          <div className="bg-slate-900 border border-slate-700 rounded-3xl max-w-lg w-full p-5 shadow-2xl">
             <div className="flex items-center justify-between pb-3 border-b border-slate-800">
               <div className="flex items-center gap-2">
                 <KeyRound className="w-5 h-5 text-amber-400" />
-                <h3 className="font-extrabold text-sm sm:text-base text-white">
-                  Danh Sách Tài Khoản & Mật Khẩu
-                </h3>
+                <div>
+                  <h3 className="font-black text-white">KHỞI TẠO QUẢN TRỊ CLOUD</h3>
+                  <p className="text-[10px] text-slate-400">Chỉ dùng một lần cho hệ thống mới</p>
+                </div>
               </div>
-              <button
-                type="button"
-                onClick={() => setShowHelpModal(false)}
-                className="text-slate-400 hover:text-white text-sm font-bold p-1"
-              >
-                ✕
+              <button type="button" onClick={() => setShowSetup(false)} className="text-slate-400 hover:text-white p-1">
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="mt-4 space-y-3 max-h-96 overflow-y-auto text-xs text-slate-300 pr-1">
-              <div className="p-3 bg-amber-500/10 border border-amber-400/30 rounded-xl text-amber-200">
-                <b>Mật khẩu mặc định:</b> Tất cả các tài khoản đều có mật khẩu mặc định là <code className="bg-slate-950 px-2 py-0.5 rounded text-amber-300 font-mono font-bold">123</code> hoặc <code className="bg-slate-950 px-2 py-0.5 rounded text-amber-300 font-mono font-bold">123456</code>.
+            {setupMessage && (
+              <div className="mt-3 p-3 rounded-xl bg-amber-950/50 border border-amber-600/40 text-amber-200 text-xs flex items-start gap-2">
+                <HelpCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>{setupMessage}</span>
               </div>
+            )}
 
-              <div className="space-y-2">
-                <div className="p-3 bg-red-950/70 border border-amber-500/60 rounded-xl space-y-2.5">
-                  <div className="font-bold text-amber-300 flex items-center justify-between">
-                    <span className="flex items-center gap-1.5">
-                      <ShieldCheck className="w-4 h-4 text-amber-400" />
-                      1. Tài khoản Quản trị & Ban Chỉ huy (Toàn quyền):
-                    </span>
-                    <span className="text-[10px] bg-red-600 text-white px-2 py-0.5 rounded font-mono font-bold">ADMIN</span>
-                  </div>
-
-                  {adminAccounts.map((admin) => {
-                    const isPrimary = admin.username === 'maitritam' || admin.email === 'maitritam@gmail.com';
-                    return (
-                      <div key={admin.id} className={`p-2.5 rounded-lg border text-[11px] ${
-                        isPrimary ? 'bg-amber-500/10 border-amber-400/50' : 'bg-black/30 border-slate-700'
-                      }`}>
-                        <div className="font-bold text-white flex items-center justify-between">
-                          <span className="text-amber-200">
-                            {admin.rank} {admin.name} ({admin.title})
-                          </span>
-                          {isPrimary && (
-                            <span className="text-[9px] bg-amber-400 text-slate-950 px-1.5 py-0.2 rounded font-black">
-                              TÀI KHOẢN CỦA BẠN
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-slate-300 mt-1 space-y-0.5">
-                          <div>
-                            • Tên đăng nhập / Email: <code className="text-amber-300 font-mono bg-black/40 px-1.5 py-0.5 rounded font-bold">{admin.email || admin.username}</code> hoặc <code className="text-amber-300 font-mono bg-black/40 px-1.5 py-0.5 rounded font-bold">{admin.username}</code>
-                          </div>
-                          <div>
-                            • Mật khẩu: <code className="text-white font-mono bg-black/40 px-1.5 py-0.5 rounded font-bold">{admin.password}</code> (hoặc 123456)
-                          </div>
-                          <div className="text-slate-400 text-[10px]">
-                            • Quyền hạn: Toàn quyền quản trị, giao nhiệm vụ, phân công cán bộ, xuất dữ liệu.
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                <div className="p-2.5 bg-slate-800/80 border border-slate-700 rounded-xl space-y-2">
-                  <div className="font-bold text-blue-300">
-                    2. Cán bộ Cảnh sát khu vực (CSKV):
-                  </div>
-                  {officerAccounts.map((officer) => (
-                    <div key={officer.id} className="p-2 bg-slate-900/90 rounded-lg border border-slate-800 text-[11px]">
-                      <div className="font-bold text-white flex justify-between">
-                        <span>{officer.rank} {officer.name}</span>
-                        <span className="text-slate-400 font-mono">{officer.assignedAreas?.join(', ')}</span>
-                      </div>
-                      <div className="text-slate-300 mt-0.5">
-                        Tên đăng nhập: <code className="text-amber-300 font-mono">{officer.username}</code> hoặc SĐT: <code className="text-amber-300 font-mono">{officer.phone}</code> | Mật khẩu: <code className="text-amber-300 font-mono">123</code>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+            <form onSubmit={handleSetup} className="mt-4 space-y-3 text-xs">
+              <div>
+                <label className="font-bold text-slate-300 block mb-1">Mã khởi tạo Cloud *</label>
+                <input
+                  value={setupToken}
+                  onChange={(e) => setSetupToken(e.target.value)}
+                  placeholder="Nhập mã khởi tạo được cấp riêng"
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-white font-mono"
+                  required
+                />
               </div>
-            </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <input value={setupUsername} onChange={(e) => setSetupUsername(e.target.value)} placeholder="Tên đăng nhập" className="px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-white" required />
+                <input type="email" value={setupEmail} onChange={(e) => setSetupEmail(e.target.value)} placeholder="Email quản trị" className="px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-white" required />
+              </div>
+              <input type="password" value={setupPassword} onChange={(e) => setSetupPassword(e.target.value)} placeholder="Mật khẩu Cloud (ít nhất 8 ký tự)" className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-white" required />
+              <input value={setupName} onChange={(e) => setSetupName(e.target.value)} placeholder="Họ và tên quản trị" className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-white" required />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <input value={setupRank} onChange={(e) => setSetupRank(e.target.value)} placeholder="Cấp bậc" className="px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-white" />
+                <input value={setupPhone} onChange={(e) => setSetupPhone(e.target.value)} placeholder="Số điện thoại" className="px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-white" />
+              </div>
+              <input value={setupTitle} onChange={(e) => setSetupTitle(e.target.value)} placeholder="Chức vụ" className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-white" />
 
-            <div className="mt-4 pt-3 border-t border-slate-800 flex justify-end">
-              <button
-                type="button"
-                onClick={() => setShowHelpModal(false)}
-                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold transition"
-              >
-                Đã hiểu, đóng lại
-              </button>
+              <div className="pt-2 flex flex-col sm:flex-row justify-end gap-2">
+                {setupPending && (
+                  <button type="button" onClick={handleCompleteSetup} disabled={loading} className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold flex items-center justify-center gap-1.5 disabled:opacity-50">
+                    <CheckCircle2 className="w-4 h-4" /> Hoàn tất khởi tạo
+                  </button>
+                )}
+                <button type="button" onClick={() => setShowSetup(false)} className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold">Đóng</button>
+                <button type="submit" disabled={loading} className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black disabled:opacity-50">
+                  {loading ? 'Đang khởi tạo...' : 'Tạo quản trị Cloud'}
+                </button>
+              </div>
+            </form>
+
+            <div className="mt-3 text-[10px] text-slate-500">
+              Lưu ý: không dùng mã khởi tạo cho người khác. Mật khẩu chỉ được Supabase Auth lưu dưới dạng bảo mật.
             </div>
           </div>
         </div>
