@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { TaskReferenceLink } from './TaskReferenceLink';
 import { HKCCHRecord } from '../types';
 import { CheckCircle2, Circle, Edit2, User, MapPin, Trash2 } from 'lucide-react';
 
@@ -65,6 +66,8 @@ export const HkcchCard: React.FC<HkcchCardProps> = ({
                 </span>
               )}
             </div>
+
+            <TaskReferenceLink title={record.referenceTitle} url={record.referenceLink} />
 
             {/* Note display & editing */}
             {isEditingNote ? (
