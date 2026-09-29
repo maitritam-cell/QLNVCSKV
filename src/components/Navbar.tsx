@@ -12,7 +12,8 @@ import {
   ChevronDown,
   ShieldAlert,
   ArrowRightLeft,
-  Building
+  Building,
+  ExternalLink
 } from 'lucide-react';
 import { UserAccount } from '../types';
 
@@ -110,6 +111,18 @@ export const Navbar: React.FC<NavbarProps> = ({
           >
             <BarChart3 className="w-3.5 h-3.5" />
             <span>Báo Cáo</span>
+          </button>
+
+          {/* Quick access to the queue-number system */}
+          <button
+            type="button"
+            id="btn-open-bocso-system"
+            onClick={() => window.open('https://bocso.capr.click/', '_blank', 'noopener,noreferrer')}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-amber-100 bg-emerald-700/80 hover:bg-emerald-600 border border-emerald-400/30 shadow-sm transition-all duration-200"
+            title="Mở hệ thống Bóc số"
+          >
+            <ExternalLink className="w-3.5 h-3.5" />
+            <span>Bóc Số</span>
           </button>
 
           {/* Staff Management & Task Assignment Tab (Chỉ huy / Toàn quyền or Officer viewing) */}
