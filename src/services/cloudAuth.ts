@@ -56,6 +56,112 @@ export async function getCloudSession() {
   return data.session || null;
 }
 
+export async function createCloudAccount(input: {
+  username: string;
+  email: string;
+  password: string;
+  name: string;
+  rank: string;
+  title: string;
+  phone: string;
+  role: 'admin' | 'officer';
+  staffId?: string;
+  assignedAreas?: string[];
+}) {
+  const isolatedClient = (await import('@supabase/supabase-js')).createClient(
+    import.meta.env.VITE_SUPABASE_URL || 'https://gpukluiksejdpbbtiyze.supabase.co',
+    import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_qvM58njlnFC00YXyfIEk0g_uvI1Dbf3',
+    {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false
+      }
+    }
+  );
+
+  const created = await isolatedClient.auth.signUp({
+    email: input.email.trim().toLowerCase(),
+    password: input.password,
+    options: { data: { full_name: input.name.trim() } }
+  });
+
+  if (created.error || !created.data.user) {
+    return { success: false, error: created.error?.message || 'Không tạo được tài khoản xác thực.' };
+  }
+
+  const profile = await supabase.from('nv_profiles').insert({
+    id: created.data.user.id,
+    username: input.username.trim(),
+    email: input.email.trim().toLowerCase(),
+    full_name: input.name.trim(),
+    rank: input.rank.trim(),
+    title: input.title.trim(),
+    phone: input.phone.trim(),
+    role: input.role,
+    staff_id: input.staffId || null,
+    assigned_areas: input.assignedAreas || [],
+    active: true
+  });
+
+  if (profile.error) {
+    return {
+      success: false,
+      error: `Tài khoản Auth đã được tạo nhưng chưa tạo được hồ sơ Cloud: ${profile.error.message}`
+    };
+  }
+
+  return {
+    success: true,
+    userId: created.data.user.id,
+    emailConfirmed: Boolean(created.data.session)
+  };
+}
+
+export async function updateCloudAccount(input: {
+  id: string;
+  username: string;
+  email: string;
+  name: string;
+  rank: string;
+  title: string;
+  phone: string;
+  role: 'admin' | 'officer';
+  staffId?: string;
+  assignedAreas?: string[];
+  active?: boolean;
+}) {
+  const { error } = await supabase.from('nv_profiles').update({
+    username: input.username.trim(),
+    email: input.email.trim().toLowerCase(),
+    full_name: input.name.trim(),
+    rank: input.rank.trim(),
+    title: input.title.trim(),
+    phone: input.phone.trim(),
+    role: input.role,
+    staff_id: input.staffId || null,
+    assigned_areas: input.assignedAreas || [],
+    active: input.active !== false
+  }).eq('id', input.id);
+
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}
+
+export async function deactivateCloudAccount(id: string) {
+  const { error } = await supabase.from('nv_profiles').update({ active: false }).eq('id', id);
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}
+
+export async function sendCloudPasswordReset(email: string) {
+  const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
+    redirectTo: window.location.origin
+  });
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}
+
 
 export interface CloudAdminSetupInput {
   token: string;
