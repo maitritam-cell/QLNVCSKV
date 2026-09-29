@@ -32,6 +32,7 @@ import {
   persistTaskCategories,
   persistTaskList,
   persistInformationPosts,
+  persistGenericTasks,
   persistSetting,
   migrateLocalDataToCloud as migrateLocalDataToCloudRemote
 } from './cloudStorage';
@@ -474,6 +475,10 @@ export function getInformationPosts(): InformationPost[] {
 }
 
 export function saveInformationPosts(list: InformationPost[]): void {
+  if (isCloudReady()) {
+    void persistInformationPosts(list);
+    return;
+  }
   localStorage.setItem(INFORMATION_POSTS_KEY, JSON.stringify(list));
 }
 
@@ -514,7 +519,7 @@ export function getGenericTasksList(): GenericTaskRecord[] {
 
 export function saveGenericTasksList(list: GenericTaskRecord[]): void {
   if (isCloudReady()) {
-    void persistTaskList('__generic__', list);
+    void persistGenericTasks(list);
     return;
   }
   localStorage.setItem(STORAGE_KEYS.GENERIC_TASKS, JSON.stringify(list));
