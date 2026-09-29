@@ -13,6 +13,7 @@ import {
   UserRole,
   TaskCategoryConfig,
   GenericTaskRecord,
+  InformationPost,
   ResidentialGroup
 } from '../types';
 import {
@@ -436,6 +437,46 @@ export function updateTaskCategory(cat: TaskCategoryConfig): boolean {
   categories[idx] = { ...cat };
   saveTaskCategories(categories);
   return true;
+}
+
+const INFORMATION_POSTS_KEY = 'qlnv_informational_posts';
+
+export function getInformationPosts(): InformationPost[] {
+  try {
+    const raw = localStorage.getItem(INFORMATION_POSTS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveInformationPosts(list: InformationPost[]): void {
+  localStorage.setItem(INFORMATION_POSTS_KEY, JSON.stringify(list));
+}
+
+export function addInformationPost(data: Omit<InformationPost, 'id' | 'createdAt' | 'updatedAt'>): InformationPost {
+  const now = new Date().toISOString();
+  const post: InformationPost = {
+    ...data,
+    id: `info_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    createdAt: now,
+    updatedAt: now
+  };
+  saveInformationPosts([post, ...getInformationPosts()]);
+  return post;
+}
+
+export function updateInformationPost(post: InformationPost): boolean {
+  const list = getInformationPosts();
+  const index = list.findIndex((item) => item.id === post.id);
+  if (index < 0) return false;
+  list[index] = { ...post, updatedAt: new Date().toISOString() };
+  saveInformationPosts(list);
+  return true;
+}
+
+export function deleteInformationPost(id: string): void {
+  saveInformationPosts(getInformationPosts().filter((item) => item.id !== id));
 }
 
 export function getGenericTasksList(): GenericTaskRecord[] {
