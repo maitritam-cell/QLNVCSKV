@@ -424,6 +424,8 @@ export function App() {
         canBoName: recordData.staffName,
         isDone: false,
         note: recordData.note || '',
+        referenceTitle: recordData.referenceTitle || '',
+        referenceLink: recordData.referenceLink || '',
         updatedAt: timestamp
       };
       const updated = [newRec, ...hkcchList];
@@ -442,6 +444,8 @@ export function App() {
         isDone: false,
         ketQuaTest: 'Chưa test',
         note: recordData.info1 || '',
+        referenceTitle: recordData.referenceTitle || '',
+        referenceLink: recordData.referenceLink || '',
         updatedAt: timestamp
       };
       const updated = [newRec, ...matuyList];
@@ -459,6 +463,8 @@ export function App() {
         canBoId: recordData.staffId,
         canBoName: recordData.staffName,
         isDone: false,
+        referenceTitle: recordData.referenceTitle || '',
+        referenceLink: recordData.referenceLink || '',
         updatedAt: timestamp
       };
       const updated = [newRec, ...dcttpList];
@@ -477,6 +483,8 @@ export function App() {
         canBoName: recordData.staffName,
         status: 'pending',
         isDone: false,
+        referenceTitle: recordData.referenceTitle || '',
+        referenceLink: recordData.referenceLink || '',
         updatedAt: timestamp
       };
       const updated = [newRec, ...datdaiList];
@@ -496,6 +504,8 @@ export function App() {
         isDone: false,
         note: recordData.note || '',
         info1: recordData.info1,
+        referenceTitle: recordData.referenceTitle || '',
+        referenceLink: recordData.referenceLink || '',
         updatedAt: timestamp
       };
       const updated = [newRec, ...genericTasksList];
