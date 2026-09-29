@@ -1143,6 +1143,19 @@ export function resetAccountPassword(userId: string, defaultPassword = '123'): b
 }
 
 export function resetAllDataToDefault(): void {
+  if (isCloudReady()) {
+    saveStaffList(INITIAL_STAFF);
+    saveResidentialGroups(DEFAULT_RESIDENTIAL_GROUPS);
+    saveTaskCategories(DEFAULT_TASK_CATEGORIES);
+    saveHkcchList(INITIAL_HKCCH);
+    saveMatuyList(INITIAL_MATUY);
+    saveDcttpList(INITIAL_DCTTP);
+    saveDatdaiList(INITIAL_DATDAI);
+    saveGenericTasksList([]);
+    saveInformationPosts([]);
+    return;
+  }
+
   localStorage.setItem(STORAGE_KEYS.STAFF, JSON.stringify(INITIAL_STAFF));
   localStorage.setItem(STORAGE_KEYS.HKCCH, JSON.stringify(INITIAL_HKCCH));
   localStorage.setItem(STORAGE_KEYS.MATUY, JSON.stringify(INITIAL_MATUY));
