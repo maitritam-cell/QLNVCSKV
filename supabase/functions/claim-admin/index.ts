@@ -53,6 +53,7 @@ Deno.serve(async (req) => {
     const profile = await admin.from('nv_profiles').insert({
       id: verified.data.user.id,
       username: String(username).trim(),
+      email: verified.data.user.email || null,
       full_name: String(name).trim(),
       rank: String(rank || 'Trung tá'),
       title: String(title || 'Quản trị hệ thống'),
