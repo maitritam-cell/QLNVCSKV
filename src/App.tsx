@@ -149,6 +149,7 @@ export function App() {
         if (profile) {
           setCurrentUserState(profile);
           setCurrentUser(profile);
+          setSelectedStaffId(profile.staffId || '');
           await initializeCloudStorage();
           startCloudRealtime(() => {
             if (mounted) applyCurrentDataToState();
