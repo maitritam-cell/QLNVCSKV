@@ -6,7 +6,7 @@ const SUPABASE_URL =
 // Publishable key is safe for browser clients; RLS is the security boundary.
 const SUPABASE_PUBLISHABLE_KEY =
   import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
-  'sb_publishable_qvM58njlnFC00YXyfIE0k_uvI1Dbf3';
+  'sb_publishable_qvM58njlnFC00YXyfIEk0g_uvI1Dbf3';
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
