@@ -138,7 +138,6 @@ export const CloudAccountManagementModal: React.FC<CloudAccountManagementModalPr
         id: editing.id,
         username: username.trim(),
         email: email.trim(),
-        password: '',
         name: name.trim(),
         rank: rank.trim(),
         title: title.trim(),

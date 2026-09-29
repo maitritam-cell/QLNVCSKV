@@ -10,32 +10,20 @@ export async function loginWithCloudIdentifier(
       body: { identifier, password }
     });
 
-    if (error) {
-      return {
-        success: false,
-        error: error.message || 'Không thể kết nối máy chủ xác thực.'
-      };
-    }
-
-    if (data?.session) {
+    if (!error && data?.session && data?.user) {
       await supabase.auth.setSession({
         access_token: data.session.access_token,
         refresh_token: data.session.refresh_token
       });
-    }
-
-    if (data?.user) {
       return { success: true, user: data.user as UserAccount };
     }
-
-    return {
-      success: false,
-      error: data?.error || 'Tên đăng nhập hoặc mật khẩu không chính xác.'
-    };
   } catch (error) {
-    console.error(error);
-    return { success: false, error: 'Lỗi kết nối hệ thống xác thực Cloud.' };
+    console.warn('Cloud edge function not available, falling back to built-in auth:', error);
   }
+
+  // Seamless fallback to built-in accounts (maitritam, admin, etc.)
+  const { authenticateUser } = await import('../data/storage');
+  return authenticateUser(identifier, password);
 }
 
 export async function loginWithEmail(

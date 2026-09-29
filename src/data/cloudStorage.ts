@@ -286,11 +286,11 @@ export async function initializeCloudStorage(): Promise<boolean> {
 
   for (const row of tasks.data || []) {
     const mapped = dbTaskToRecords(row);
-    if (row.task_type === 'hkcch') grouped.hkcch.push(mapped);
-    else if (row.task_type === 'matuy') grouped.matuy.push(mapped);
-    else if (row.task_type === 'dcttp') grouped.dcttp.push(mapped);
-    else if (row.task_type === 'datdai') grouped.datdai.push(mapped);
-    else grouped.generic.push(mapped);
+    if (row.task_type === 'hkcch') grouped.hkcch.push(mapped as HKCCHRecord);
+    else if (row.task_type === 'matuy') grouped.matuy.push(mapped as MaTuyRecord);
+    else if (row.task_type === 'dcttp') grouped.dcttp.push(mapped as DCTTPRecord);
+    else if (row.task_type === 'datdai') grouped.datdai.push(mapped as DatDaiRecord);
+    else grouped.generic.push(mapped as GenericTaskRecord);
   }
 
   cloudCache.hkcch = grouped.hkcch;

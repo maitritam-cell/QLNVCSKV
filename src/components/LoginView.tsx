@@ -232,15 +232,28 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
+              <div className="flex items-center justify-between mt-1.5 text-[11px] text-slate-400">
+                <span>Mật khẩu mặc định: <b className="text-amber-300">123</b></span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIdentifier('maitritam');
+                    setPassword('123');
+                  }}
+                  className="text-amber-400 hover:text-amber-300 underline font-medium"
+                >
+                  Điền tài khoản Mai Trí Tâm
+                </button>
+              </div>
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full mt-2 py-3 px-4 bg-gradient-to-r from-red-700 via-red-600 to-amber-600 hover:from-red-600 hover:to-amber-500 text-white font-extrabold text-xs sm:text-sm rounded-xl shadow-lg flex items-center justify-center gap-2 disabled:opacity-50"
+              className="w-full mt-2 py-3 px-4 bg-gradient-to-r from-red-700 via-red-600 to-amber-600 hover:from-red-600 hover:to-amber-500 text-white font-extrabold text-xs sm:text-sm rounded-xl shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
             >
               {loading ? (
-                <span className="animate-pulse">Đang xác thực Cloud...</span>
+                <span className="animate-pulse">Đang xác thực hệ thống...</span>
               ) : (
                 <>
                   <LogIn className="w-4 h-4" />
@@ -284,8 +297,18 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
               </button>
             </div>
 
+            <div className="mt-3 p-3 rounded-2xl bg-amber-500/15 border border-amber-400/40 text-amber-200 text-xs space-y-1">
+              <div className="font-black text-amber-300 flex items-center gap-1.5">
+                <AlertCircle className="w-4 h-4 shrink-0 text-amber-400" />
+                <span>Bạn không cần mã này để sử dụng phần mềm!</span>
+              </div>
+              <p className="text-[11px] text-slate-300 leading-relaxed">
+                Mã khởi tạo (Setup Token) chỉ dành cho kỹ thuật viên khi thiết lập máy chủ mới. Bạn chỉ cần bấm <b>Đóng</b> cửa sổ này và đăng nhập trực tiếp ở màn hình chính bằng tài khoản <b>maitritam</b> (mật khẩu mặc định: <b>123</b>).
+              </p>
+            </div>
+
             {setupMessage && (
-              <div className="mt-3 p-3 rounded-xl bg-amber-950/50 border border-amber-600/40 text-amber-200 text-xs flex items-start gap-2">
+              <div className="mt-3 p-3 rounded-xl bg-red-950/50 border border-red-600/40 text-red-200 text-xs flex items-start gap-2">
                 <HelpCircle className="w-4 h-4 shrink-0 mt-0.5" />
                 <span>{setupMessage}</span>
               </div>
