@@ -36,19 +36,30 @@ export const CloudChangePasswordModal: React.FC<CloudChangePasswordModalProps> =
     }
 
     setLoading(true);
-    const { error: updateError } = await supabase.auth.updateUser({
+
+    // The password must be changed against the authenticated Supabase session.
+    // It is intentionally not copied to localStorage or nv_profiles.
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !sessionData.session) {
+      setLoading(false);
+      setError('Phiên đăng nhập Cloud đã hết hạn. Vui lòng đăng nhập lại trước khi đổi mật khẩu.');
+      return;
+    }
+
+    const { data: updatedData, error: updateError } = await supabase.auth.updateUser({
       password: newPassword
     });
+
     setLoading(false);
 
-    if (updateError) {
-      setError(updateError.message || 'Không thể cập nhật mật khẩu Cloud.');
+    if (updateError || !updatedData.user) {
+      setError(updateError?.message || 'Không thể cập nhật mật khẩu Cloud.');
       return;
     }
 
     setNewPassword('');
     setConfirmPassword('');
-    onPasswordChanged('Đã thay đổi mật khẩu Cloud thành công ✓');
+    onPasswordChanged('Đã thay đổi mật khẩu Cloud trên máy chủ. Xóa dữ liệu web sẽ không làm mật khẩu quay về mặc định ✓');
     onClose();
   };
 
