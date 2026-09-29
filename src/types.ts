@@ -100,6 +100,19 @@ export interface DatDaiRecord {
   updatedAt?: string;
 }
 
+export interface InformationPost {
+  id: string;
+  title: string;
+  category: string;
+  content: string;
+  link?: string;
+  taskType?: string;
+  isPinned?: boolean;
+  createdAt: string;
+  updatedAt?: string;
+  createdBy?: string;
+}
+
 export interface GenericTaskRecord {
   stt: number;
   taskType: string;
