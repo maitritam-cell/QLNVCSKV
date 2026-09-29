@@ -466,7 +466,7 @@ export async function persistInformationPosts(list: InformationPost[]) {
     link: p.link || null,
     task_type: p.taskType || null,
     is_pinned: Boolean(p.isPinned),
-    created_by: cloudCache.userId,
+    created_by: cloudCache.userId || null,
     created_at: p.createdAt || new Date().toISOString()
   }));
   const { error } = await supabase.from('nv_information_posts').upsert(rows, { onConflict: 'id' });
