@@ -48,6 +48,7 @@ import { AddTaskModal } from './components/AddTaskModal';
 import { DataManagementModal } from './components/DataManagementModal';
 import { LoginView } from './components/LoginView';
 import { ChangePasswordModal } from './components/ChangePasswordModal';
+import { CloudChangePasswordModal } from './components/CloudChangePasswordModal';
 import { AccountManagementModal } from './components/AccountManagementModal';
 import { CloudAccountManagementModal } from './components/CloudAccountManagementModal';
 import { ManageTaskCategoriesModal } from './components/ManageTaskCategoriesModal';
@@ -762,11 +763,19 @@ export function App() {
         onCategoriesUpdated={handleCategoriesUpdated}
       />
 
-      {currentUser && (
+      {currentUser && !isCloudReady() && (
         <ChangePasswordModal
           isOpen={isChangePasswordOpen}
           onClose={() => setIsChangePasswordOpen(false)}
           currentUser={currentUser}
+          onPasswordChanged={(msg) => showToast(msg)}
+        />
+      )}
+
+      {currentUser && isCloudReady() && (
+        <CloudChangePasswordModal
+          isOpen={isChangePasswordOpen}
+          onClose={() => setIsChangePasswordOpen(false)}
           onPasswordChanged={(msg) => showToast(msg)}
         />
       )}
