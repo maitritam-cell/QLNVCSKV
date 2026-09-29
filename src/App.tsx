@@ -47,9 +47,7 @@ import { StaffManagementView } from './components/StaffManagementView';
 import { AddTaskModal } from './components/AddTaskModal';
 import { DataManagementModal } from './components/DataManagementModal';
 import { LoginView } from './components/LoginView';
-import { ChangePasswordModal } from './components/ChangePasswordModal';
 import { CloudChangePasswordModal } from './components/CloudChangePasswordModal';
-import { AccountManagementModal } from './components/AccountManagementModal';
 import { CloudAccountManagementModal } from './components/CloudAccountManagementModal';
 import { ManageTaskCategoriesModal } from './components/ManageTaskCategoriesModal';
 import { ResidentialGroupModal } from './components/ResidentialGroupModal';
@@ -199,7 +197,23 @@ export function App() {
   };
 
   // Auth handlers
-  const handleLoginSuccess = (user: UserAccount) => {
+  const handleLoginSuccess = async (user: UserAccount) => {
+    // Do not expose the application before the Cloud session and profile-backed
+    // storage are fully initialized. This prevents a fresh browser from briefly
+    // falling back to legacy localStorage/default accounts.
+    setAuthLoading(true);
+    const cloudInitialized = await initializeCloudStorage();
+    if (!cloudInitialized) {
+      await signOutCloud();
+      clearCloudCache();
+      setCurrentUserState(null);
+      setCurrentUser(null);
+      setIsLoginModalOpen(false);
+      setAuthLoading(false);
+      showToast('Không thể khởi tạo Cloud. Dữ liệu cục bộ/mật khẩu mặc định sẽ không được dùng.');
+      return;
+    }
+
     setCurrentUserState(user);
     setCurrentUser(user);
     setIsLoginModalOpen(false);
@@ -207,7 +221,8 @@ export function App() {
     startCloudRealtime(() => {
       applyCurrentDataToState();
     });
-    void loadAllData();
+    await loadAllData();
+    setAuthLoading(false);
     showToast(`Đăng nhập thành công: ${user.rank} ${user.name} ✓`);
   };
 
@@ -763,30 +778,11 @@ export function App() {
         onCategoriesUpdated={handleCategoriesUpdated}
       />
 
-      {currentUser && !isCloudReady() && (
-        <ChangePasswordModal
-          isOpen={isChangePasswordOpen}
-          onClose={() => setIsChangePasswordOpen(false)}
-          currentUser={currentUser}
-          onPasswordChanged={(msg) => showToast(msg)}
-        />
-      )}
-
       {currentUser && isCloudReady() && (
         <CloudChangePasswordModal
           isOpen={isChangePasswordOpen}
           onClose={() => setIsChangePasswordOpen(false)}
           onPasswordChanged={(msg) => showToast(msg)}
-        />
-      )}
-
-      {/* Legacy account modal retained for backward compatibility; Cloud mode uses the central modal below. */}
-      {!isCloudReady() && (
-        <AccountManagementModal
-          isOpen={isAccountModalOpen}
-          onClose={() => setIsAccountModalOpen(false)}
-          onAccountsUpdated={loadAllData}
-          currentUserId={currentUser?.id}
         />
       )}
 
