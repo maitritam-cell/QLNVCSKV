@@ -13,7 +13,8 @@ import {
   ShieldAlert,
   ArrowRightLeft,
   Building,
-  ExternalLink
+  ExternalLink,
+  BookOpen
 } from 'lucide-react';
 import { UserAccount } from '../types';
 
@@ -28,6 +29,7 @@ interface NavbarProps {
   onOpenChangePassword: () => void;
   onOpenLoginModal: () => void;
   onOpenAccountManagement?: () => void;
+  onOpenInformationLibrary?: () => void;
   onOpenResidentialGroupManagement?: () => void;
 }
 
@@ -42,6 +44,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenChangePassword,
   onOpenLoginModal,
   onOpenAccountManagement,
+  onOpenInformationLibrary,
   onOpenResidentialGroupManagement
 }) => {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
@@ -244,6 +247,21 @@ export const Navbar: React.FC<NavbarProps> = ({
                         >
                           <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
                           <span>Quản Lý Tài Khoản & Phân Quyền</span>
+                        </button>
+                      )}
+
+                      {onOpenInformationLibrary && (
+                        <button
+                          type="button"
+                          id="btn-nav-information-library"
+                          onClick={() => {
+                            setIsUserMenuOpen(false);
+                            onOpenInformationLibrary();
+                          }}
+                          className="w-full text-left px-3 py-2 text-xs text-emerald-300 hover:text-emerald-200 hover:bg-slate-800 rounded-xl flex items-center gap-2 transition font-semibold"
+                        >
+                          <BookOpen className="w-3.5 h-3.5 text-emerald-400" />
+                          <span>Thông Tin & Tài Liệu</span>
                         </button>
                       )}
 
