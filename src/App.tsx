@@ -39,6 +39,7 @@ import {
   isCloudReady,
   clearCloudCache
 } from './data/storage';
+import { startCloudRealtime, stopCloudRealtime } from './data/cloudStorage';
 import { Navbar } from './components/Navbar';
 import { TaskUpdateView } from './components/TaskUpdateView';
 import { DashboardView } from './components/DashboardView';
@@ -106,6 +107,16 @@ export function App() {
   };
 
   // Load all initial data from local storage
+  const applyCurrentDataToState = useCallback(() => {
+    const loadedStaff = getStaffList();
+    setStaffList(loadedStaff);
+    setHkcchList(getHkcchList());
+    setMatuyList(getMatuyList());
+    setDcttpList(getDcttpList());
+    setDatdaiList(getDatdaiList());
+    setGenericTasksList(getGenericTasksList());
+  }, []);
+
   const loadAllData = useCallback(async () => {
     setIsRefreshing(true);
     if (isCloudReady()) {
@@ -138,6 +149,9 @@ export function App() {
           setCurrentUserState(profile);
           setCurrentUser(profile);
           await initializeCloudStorage();
+          startCloudRealtime(() => {
+            if (mounted) applyCurrentDataToState();
+          });
           if (mounted) {
             const categories = getTaskCategories();
             if (categories.length > 0 && !categories.some((cat) => cat.id === currentTask)) {
@@ -169,8 +183,9 @@ export function App() {
     return () => {
       mounted = false;
       authSubscription.subscription.unsubscribe();
+      void stopCloudRealtime();
     };
-  }, [loadAllData]);
+  }, [loadAllData, applyCurrentDataToState]);
 
   const handleCategoriesUpdated = () => {
     const categories = getTaskCategories();
