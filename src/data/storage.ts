@@ -442,6 +442,9 @@ export function getTaskCategories(): TaskCategoryConfig[] {
 
 export function saveTaskCategories(list: TaskCategoryConfig[]): void {
   if (isCloudReady()) {
+    // Keep the in-memory Cloud cache in sync immediately so deleted/added
+    // categories disappear/appear in the UI without requiring a full reload.
+    cloudCache.taskCategories = list;
     void persistTaskCategories(list);
     return;
   }
@@ -1109,7 +1112,10 @@ export function syncStaffToAccounts(staffList: Staff[]): void {
           name: staff.name.replace(/^Đ\/c\s*/i, ''),
           rank: staff.rank,
           phone: staff.phone,
-          assignedAreas: staff.assignedAreas
+          assignedAreas: staff.assignedAreas,
+          // Any account linked to a CSKV staff record is an officer account.
+          // Administrator accounts are not linked to a staffId.
+          role: 'officer'
         };
         modified = true;
       }
