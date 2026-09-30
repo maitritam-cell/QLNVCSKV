@@ -182,7 +182,10 @@ export function App() {
   };
 
   // Calculations
-  const currentTaskStats: TaskStats = calculateTaskStats(currentTask, selectedStaffId || undefined);
+  const currentTaskStats: TaskStats = calculateTaskStats(
+    currentTask,
+    currentUser?.role === 'admin' ? (selectedStaffId || undefined) : (currentUser?.staffId || '__NO_STAFF__')
+  );
   const allDashboardStats: AllDashboardStats = getAllDashboardStats();
 
   const staffStatsByTask: Record<TaskType, StaffTaskStats[]> = {
@@ -584,15 +587,15 @@ export function App() {
       <Navbar
         currentTab={currentTab}
         onSelectTab={setCurrentTab}
-        onOpenDataModal={() => setIsDataModalOpen(true)}
+        onOpenDataModal={() => currentUser.role === 'admin' && setIsDataModalOpen(true)}
         onRefreshData={loadAllData}
         isRefreshing={isRefreshing}
         currentUser={currentUser}
         onLogout={handleLogout}
         onOpenChangePassword={() => setIsChangePasswordOpen(true)}
         onOpenLoginModal={() => setIsLoginModalOpen(true)}
-        onOpenAccountManagement={() => setIsAccountModalOpen(true)}
-        onOpenResidentialModal={() => setIsResidentialModalOpen(true)}
+        onOpenAccountManagement={() => currentUser.role === 'admin' && setIsAccountModalOpen(true)}
+        onOpenResidentialModal={() => currentUser.role === 'admin' && setIsResidentialModalOpen(true)}
         cloudConnected={cloudStatus.isConnected}
         cloudSyncing={cloudStatus.isSyncing}
       />
@@ -674,9 +677,9 @@ export function App() {
             onUpdateGenericTask={handleUpdateGenericTask}
             onDeleteRecord={handleDeleteRecord}
             onOpenAddModal={() => setIsAddModalOpen(true)}
-            onOpenManageCategories={() => setIsManageCategoriesOpen(true)}
+            onOpenManageCategories={() => currentUser.role === 'admin' && setIsManageCategoriesOpen(true)}
             onOpenResidentialModal={() => setIsResidentialModalOpen(true)}
-            onOpenExcelModal={() => setIsExcelModalOpen(true)}
+            onOpenExcelModal={() => currentUser.role === 'admin' && setIsExcelModalOpen(true)}
           />
         )}
 
@@ -705,7 +708,7 @@ export function App() {
             onReassignTasks={handleReassignTasks}
             onNavigateToTaskView={handleSelectTaskAndStaff}
             onOpenAccountManagement={() => setIsAccountModalOpen(true)}
-            onOpenResidentialGroupModal={() => setIsResidentialModalOpen(true)}
+            onOpenResidentialGroupModal={() => currentUser.role === 'admin' && setIsResidentialModalOpen(true)}
             onOpenExcelModal={() => setIsExcelModalOpen(true)}
           />
         )}
@@ -722,7 +725,7 @@ export function App() {
       />
 
       <DataManagementModal
-        isOpen={isDataModalOpen}
+        isOpen={isDataModalOpen && currentUser.role === 'admin'}
         onClose={() => setIsDataModalOpen(false)}
         onDataChanged={loadAllData}
         onOpenResidentialModal={() => setIsResidentialModalOpen(true)}
@@ -731,7 +734,7 @@ export function App() {
 
       {/* Residential Group Management Modal */}
       <ResidentialGroupModal
-        isOpen={isResidentialModalOpen}
+        isOpen={isResidentialModalOpen && currentUser.role === 'admin'}
         onClose={() => setIsResidentialModalOpen(false)}
         staffList={staffList}
         onDataUpdated={loadAllData}
@@ -739,7 +742,7 @@ export function App() {
 
       {/* Excel Import / Export by Residential Group Modal */}
       <ExcelImportExportModal
-        isOpen={isExcelModalOpen}
+        isOpen={isExcelModalOpen && currentUser.role === 'admin'}
         onClose={() => setIsExcelModalOpen(false)}
         staffList={staffList}
         onDataChanged={loadAllData}
@@ -747,7 +750,7 @@ export function App() {
 
       {/* Task Categories Management Modal */}
       <ManageTaskCategoriesModal
-        isOpen={isManageCategoriesOpen}
+        isOpen={isManageCategoriesOpen && currentUser.role === 'admin'}
         onClose={() => setIsManageCategoriesOpen(false)}
         onCategoriesUpdated={loadAllData}
       />
@@ -763,7 +766,7 @@ export function App() {
 
       {/* Account Management Modal (Admin only) */}
       <AccountManagementModal
-        isOpen={isAccountModalOpen}
+        isOpen={isAccountModalOpen && currentUser.role === 'admin'}
         onClose={() => setIsAccountModalOpen(false)}
         onAccountsUpdated={loadAllData}
         currentUserId={currentUser?.id}
