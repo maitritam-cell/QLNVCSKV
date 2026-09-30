@@ -90,7 +90,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </span>
             </div>
             <h2 className="text-lg sm:text-xl font-extrabold tracking-tight">
-              TIẾN ĐỘ THỰC HIỆN 4 CHỈ TIÊU CÔNG TÁC
+              TIẾN ĐỘ THỰC HIỆN {activeTaskKeys.length} CHỈ TIÊU CÔNG TÁC
             </h2>
             <p className="text-xs text-slate-300 mt-0.5">
               Cập nhật tức thời theo kết quả cán bộ chiến sĩ hoàn thành trên địa bàn
@@ -163,7 +163,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
       </div>
 
-      {/* 2. FOUR TASKS BREAKDOWN CARDS */}
+      {/* 2. ACTIVE TASK BREAKDOWN CARDS */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {activeTaskKeys.map((taskKey) => {
           const cfg = TASK_CONFIG[taskKey];
