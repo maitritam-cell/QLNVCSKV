@@ -116,6 +116,15 @@ export function App() {
     const loadedStaff = getStaffList();
     setStaffList(loadedStaff);
     syncStaffToAccounts(loadedStaff);
+
+    // Never let a staff-linked account keep an administrator role from legacy data.
+    const storedUser = getCurrentUser();
+    if (storedUser?.staffId && storedUser.role !== 'officer') {
+      const normalizedUser: UserAccount = { ...storedUser, role: 'officer' };
+      setCurrentUser(normalizedUser);
+      setCurrentUserState(normalizedUser);
+      if (currentTab === 'staff') setCurrentTab('update');
+    }
     setHkcchList(getHkcchList());
     setMatuyList(getMatuyList());
     setDcttpList(getDcttpList());
@@ -676,9 +685,9 @@ export function App() {
             onUpdateDatdai={handleUpdateDatdai}
             onUpdateGenericTask={handleUpdateGenericTask}
             onDeleteRecord={handleDeleteRecord}
-            onOpenAddModal={() => setIsAddModalOpen(true)}
+            onOpenAddModal={() => currentUser.role === 'admin' && setIsAddModalOpen(true)}
             onOpenManageCategories={() => currentUser.role === 'admin' && setIsManageCategoriesOpen(true)}
-            onOpenResidentialModal={() => setIsResidentialModalOpen(true)}
+            onOpenResidentialModal={() => currentUser.role === 'admin' && setIsResidentialModalOpen(true)}
             onOpenExcelModal={() => currentUser.role === 'admin' && setIsExcelModalOpen(true)}
           />
         )}
@@ -721,7 +730,7 @@ export function App() {
         staffList={staffList}
         currentTaskType={currentTask}
         onAddTask={handleAddTask}
-        onOpenResidentialGroupManager={() => setIsResidentialModalOpen(true)}
+        onOpenResidentialGroupManager={() => currentUser.role === 'admin' && setIsResidentialModalOpen(true)}
       />
 
       <DataManagementModal
