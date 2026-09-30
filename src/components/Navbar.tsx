@@ -12,7 +12,9 @@ import {
   ChevronDown,
   ShieldAlert,
   ArrowRightLeft,
-  Building
+  Building,
+  Ticket,
+  Search
 } from 'lucide-react';
 import { UserAccount } from '../types';
 import { PWAInstallButton } from './PWAInstallButton';
@@ -133,6 +135,32 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
 
           <div className="h-4 w-px bg-white/20 hidden sm:block mx-0.5" />
+
+          {/* Lấy số thứ tự - mở hệ thống bóc số công dân */}
+          <a
+            href="https://phan-rang-can-cuoc-queue.vercel.app/"
+            target="_blank"
+            rel="noopener noreferrer"
+            id="btn-get-queue-number"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-400/40 rounded-xl text-xs font-black transition shadow-md"
+            title="Mở hệ thống Lấy số thứ tự"
+          >
+            <Ticket className="w-3.5 h-3.5" />
+            <span>Lấy số thứ tự</span>
+          </a>
+
+          {/* Tra cứu hồ sơ liệt sĩ */}
+          <a
+            href="https://lietsi.capr.click"
+            target="_blank"
+            rel="noopener noreferrer"
+            id="btn-search-martyrs"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 bg-blue-700 hover:bg-blue-600 text-white border border-blue-400/40 rounded-xl text-xs font-bold transition"
+            title="Tra cứu hồ sơ liệt sĩ"
+          >
+            <Search className="w-3.5 h-3.5" />
+            <span>Tra cứu liệt sĩ</span>
+          </a>
 
           {/* Refresh Action */}
           <button
