@@ -726,6 +726,7 @@ export function getConfig(): AppConfig {
 
 export function saveConfig(cfg: AppConfig): void {
   localStorage.setItem(STORAGE_KEYS.CONFIG, JSON.stringify(cfg));
+  notifyStorageChange('config', cfg);
 }
 
 export function calculateTaskStats(taskType: TaskType, staffIdFilter?: string): TaskStats {

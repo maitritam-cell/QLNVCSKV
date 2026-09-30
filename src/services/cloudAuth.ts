@@ -6,22 +6,19 @@ export async function loginWithCloudIdentifier(
   password: string
 ): Promise<{ success: boolean; user?: UserAccount; error?: string }> {
   try {
-    const { data, error } = await supabase.functions.invoke('account-login', {
-      body: { identifier, password }
-    });
-
-    if (!error && data?.session && data?.user) {
-      await supabase.auth.setSession({
-        access_token: data.session.access_token,
-        refresh_token: data.session.refresh_token
-      });
-      return { success: true, user: data.user as UserAccount };
+    const { collection, getDocs } = await import('firebase/firestore');
+    const { db } = await import('../firebase');
+    const snap = await getDocs(collection(db, 'accounts'));
+    if (!snap.empty) {
+      const { saveUserAccounts } = await import('../data/storage');
+      const cloudAccounts = snap.docs.map((d) => d.data() as UserAccount);
+      saveUserAccounts(cloudAccounts);
     }
   } catch (error) {
-    console.warn('Cloud edge function not available, falling back to built-in auth:', error);
+    console.warn('Cloud Firestore accounts sync on login:', error);
   }
 
-  // Seamless fallback to built-in accounts (maitritam, admin, etc.)
+  // Authenticate against up-to-date accounts
   const { authenticateUser } = await import('../data/storage');
   return authenticateUser(identifier, password);
 }

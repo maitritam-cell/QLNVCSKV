@@ -22,13 +22,25 @@
         "id": { "type": "string" },
         "username": { "type": "string", "maxLength": 50 },
         "password": { "type": "string", "maxLength": 100 },
-        "role": { "type": "string", "enum": ["admin", "staff"] },
+        "role": { "type": "string", "enum": ["admin", "staff", "officer"] },
         "staffId": { "type": "string" },
         "fullName": { "type": "string", "maxLength": 100 },
         "isActive": { "type": "boolean" },
         "createdAt": { "type": "string" }
       },
-      "required": ["id", "username", "role", "fullName"]
+      "required": ["id", "username", "role"]
+    },
+    "AppConfig": {
+      "title": "AppConfig",
+      "description": "Cấu hình tên đơn vị và hệ thống",
+      "type": "object",
+      "properties": {
+        "unitName": { "type": "string", "maxLength": 200 },
+        "subUnitName": { "type": "string", "maxLength": 200 },
+        "apiUrl": { "type": "string", "maxLength": 500 },
+        "useLiveGoogleSheet": { "type": "boolean" },
+        "autoSyncIntervalMinutes": { "type": "number" }
+      }
     },
     "TaskCategory": {
       "title": "TaskCategory",
@@ -129,6 +141,19 @@
         "updatedAt": { "type": "string" }
       },
       "required": ["id", "chuHo", "staffId", "isDone"]
+    },
+    "GenericTask": {
+      "title": "GenericTask",
+      "description": "Hồ sơ chỉ tiêu tùy biến",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "taskType": { "type": "string" },
+        "stt": { "type": "number" },
+        "hoTen": { "type": "string" },
+        "canBoId": { "type": "string" },
+        "isDone": { "type": "boolean" }
+      }
     }
   },
   "firestore": {
@@ -140,11 +165,11 @@
       "schema": "Account",
       "description": "Danh sách tài khoản hệ thống"
     },
-    "/taskCategories/{categoryId}": {
+    "/task_categories/{categoryId}": {
       "schema": "TaskCategory",
       "description": "Danh mục nhiệm vụ"
     },
-    "/residentialGroups/{groupId}": {
+    "/residential_groups/{groupId}": {
       "schema": "ResidentialGroup",
       "description": "Danh sách Tổ dân phố"
     },
@@ -164,9 +189,17 @@
       "schema": "DatdaiRecord",
       "description": "Chỉ tiêu Làm sạch đất đai"
     },
+    "/generic_tasks/{recordId}": {
+      "schema": "GenericTask",
+      "description": "Chỉ tiêu tùy biến"
+    },
+    "/app_config/{docId}": {
+      "schema": "AppConfig",
+      "description": "Cấu hình đơn vị"
+    },
     "/app_state/{docId}": {
       "schema": "object",
-      "description": "Dữ liệu cấu hình hoặc trạng thái ứng dụng"
+      "description": "Trạng thái ứng dụng"
     }
   }
 }

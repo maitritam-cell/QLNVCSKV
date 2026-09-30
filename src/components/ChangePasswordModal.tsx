@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { UserAccount } from '../types';
 import { changeUserPassword } from '../data/storage';
+import { cloudUpdateAccountPassword } from '../services/firestoreSync';
 import { KeyRound, Lock, CheckCircle2, AlertCircle, Eye, EyeOff } from 'lucide-react';
 
 interface ChangePasswordModalProps {
@@ -21,10 +22,11 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
   const [confirmPass, setConfirmPass] = useState('');
   const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
@@ -49,9 +51,12 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
       return;
     }
 
-    const ok = changeUserPassword(currentUser.id, newPass);
+    setIsSubmitting(true);
+    const ok = await cloudUpdateAccountPassword(currentUser.id, newPass.trim());
+    setIsSubmitting(false);
+
     if (ok) {
-      onPasswordChanged('Đã thay đổi mật khẩu thành công ✓');
+      onPasswordChanged('Đã thay đổi và lưu mật khẩu lên máy chủ Cloud thành công ✓');
       onClose();
     } else {
       setError('Không thể cập nhật mật khẩu lúc này!');

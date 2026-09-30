@@ -160,7 +160,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
             </div>
             <div className="text-[10px] text-slate-400 flex items-center gap-1">
               <Cloud className="w-3 h-3 text-emerald-400" />
-              Dữ liệu tập trung trên Supabase
+              Dữ liệu đồng bộ trực tiếp trên Cloud Firestore
             </div>
           </div>
         </div>

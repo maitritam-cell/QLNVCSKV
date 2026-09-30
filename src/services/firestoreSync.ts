@@ -19,7 +19,8 @@ import {
   GenericTaskRecord,
   ResidentialGroup,
   TaskCategoryConfig,
-  UserAccount
+  UserAccount,
+  AppConfig
 } from '../types';
 import {
   getStaffList,
@@ -40,6 +41,10 @@ import {
   saveTaskCategories,
   getUserAccounts,
   saveUserAccounts,
+  getConfig,
+  saveConfig,
+  getCurrentUser,
+  setCurrentUser,
   registerStorageChangeHandler,
   setStorageSyncSuppressed
 } from '../data/storage';
@@ -141,6 +146,8 @@ registerStorageChangeHandler(async (entity, data) => {
       await syncCollectionWithFirestore('task_categories', data, (item) => item.id);
     } else if (entity === 'accounts' && Array.isArray(data)) {
       await syncCollectionWithFirestore('accounts', data, (item) => item.id);
+    } else if (entity === 'config' && data) {
+      await setDoc(doc(db, 'app_config', 'main'), data);
     }
     updateStatus({ lastSyncedAt: new Date() });
   } catch (err) {
@@ -236,6 +243,8 @@ export async function uploadAllLocalDataToFirestore(): Promise<void> {
       (item) => `gen_${item.taskType}_${item.stt}`
     );
 
+    await setDoc(doc(db, 'app_config', 'main'), getConfig());
+
     await setDoc(doc(db, 'app_state', 'metadata'), {
       syncedAt: new Date().toISOString(),
       version: '1.0.0',
@@ -325,6 +334,17 @@ export async function pullAllDataFromFirestore(): Promise<void> {
     const genSnap = await getDocs(collection(db, 'generic_tasks'));
     const genList = genSnap.docs.map((d) => d.data() as GenericTaskRecord);
     saveGenericTasksList(genList);
+
+    // 6. App Config
+    try {
+      const cfgSnap = await getDocs(collection(db, 'app_config'));
+      const mainDoc = cfgSnap.docs.find((d) => d.id === 'main');
+      if (mainDoc && mainDoc.exists()) {
+        saveConfig(mainDoc.data() as AppConfig);
+      }
+    } catch {
+      // Continue gracefully
+    }
 
     updateStatus({
       isConnected: true,
@@ -481,11 +501,71 @@ function setupRealtimeListeners(onRemoteUpdate?: () => void) {
       handleFirestoreError(err, OperationType.GET, 'generic_tasks');
     }
   );
+
+  // Listen to App Config
+  onSnapshot(
+    collection(db, 'app_config'),
+    (snap) => {
+      const mainDoc = snap.docs.find((d) => d.id === 'main');
+      if (mainDoc && mainDoc.exists()) {
+        setStorageSyncSuppressed(true);
+        saveConfig(mainDoc.data() as AppConfig);
+        setStorageSyncSuppressed(false);
+        if (onRemoteUpdate) onRemoteUpdate();
+      }
+    },
+    (err) => {
+      handleFirestoreError(err, OperationType.GET, 'app_config');
+    }
+  );
+
+  // Listen to Accounts
+  onSnapshot(
+    collection(db, 'accounts'),
+    (snap) => {
+      if (!snap.empty) {
+        const accounts = snap.docs.map((d) => d.data() as UserAccount);
+        setStorageSyncSuppressed(true);
+        saveUserAccounts(accounts);
+        const curr = getCurrentUser();
+        if (curr) {
+          const matched = accounts.find((a) => a.id === curr.id);
+          if (matched) {
+            setCurrentUser(matched);
+          }
+        }
+        setStorageSyncSuppressed(false);
+        if (onRemoteUpdate) onRemoteUpdate();
+      }
+    },
+    (err) => {
+      handleFirestoreError(err, OperationType.GET, 'accounts');
+    }
+  );
 }
 
 // -------------------------------------------------------------
 // Cloud Mutation Helpers (Call whenever app modifies entities)
 // -------------------------------------------------------------
+
+export async function cloudUpdateAccountPassword(
+  userId: string,
+  newPassword: string
+): Promise<boolean> {
+  try {
+    const { changeUserPassword, getUserAccounts } = await import('../data/storage');
+    changeUserPassword(userId, newPassword);
+    const accounts = getUserAccounts();
+    const acc = accounts.find((a) => a.id === userId);
+    if (acc) {
+      await setDoc(doc(db, 'accounts', userId), acc);
+    }
+    return true;
+  } catch (err) {
+    console.error('Failed to update account password in Firestore:', err);
+    return false;
+  }
+}
 
 export async function cloudSaveStaff(staff: Staff): Promise<void> {
   try {
