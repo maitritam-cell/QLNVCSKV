@@ -97,6 +97,8 @@ export const TaskUpdateView: React.FC<TaskUpdateViewProps> = ({
   const [selectedToDanPho, setSelectedToDanPho] = useState<string>('');
 
   const taskCategories = getTaskCategories();
+  const isAdmin = currentUser?.role === 'admin';
+  const effectiveStaffId = isAdmin ? selectedStaffId : (currentUser?.staffId || '');
   const taskConfig = TASK_CONFIG[currentTask];
   const residentialGroups = getResidentialGroups();
 
@@ -125,7 +127,7 @@ export const TaskUpdateView: React.FC<TaskUpdateViewProps> = ({
 
   // Base unfiltered lists for current task (before status filter)
   const baseHkcch = hkcchList.filter((item) => {
-    const matchStaff = !selectedStaffId || item.canBoId === selectedStaffId;
+    const matchStaff = !effectiveStaffId || item.canBoId === effectiveStaffId;
     const matchTo = checkToDanPhoMatch(item.toDanPho);
     const matchSearch =
       !searchTerm ||
@@ -137,7 +139,7 @@ export const TaskUpdateView: React.FC<TaskUpdateViewProps> = ({
   });
 
   const baseMatuy = matuyList.filter((item) => {
-    const matchStaff = !selectedStaffId || item.canBoId === selectedStaffId;
+    const matchStaff = !effectiveStaffId || item.canBoId === effectiveStaffId;
     const matchTo = checkToDanPhoMatch(item.toDanPho);
     const matchSearch =
       !searchTerm ||
@@ -149,7 +151,7 @@ export const TaskUpdateView: React.FC<TaskUpdateViewProps> = ({
   });
 
   const baseDcttp = dcttpList.filter((item) => {
-    const matchStaff = !selectedStaffId || item.canBoId === selectedStaffId;
+    const matchStaff = !effectiveStaffId || item.canBoId === effectiveStaffId;
     const matchTo = checkToDanPhoMatch(item.toDanPho);
     const matchSearch =
       !searchTerm ||
@@ -160,7 +162,7 @@ export const TaskUpdateView: React.FC<TaskUpdateViewProps> = ({
   });
 
   const baseDatdai = datdaiList.filter((item) => {
-    const matchStaff = !selectedStaffId || item.canBoId === selectedStaffId;
+    const matchStaff = !effectiveStaffId || item.canBoId === effectiveStaffId;
     const matchTo = checkToDanPhoMatch(item.toDanPho);
     const matchSearch =
       !searchTerm ||
@@ -173,7 +175,7 @@ export const TaskUpdateView: React.FC<TaskUpdateViewProps> = ({
 
   const baseGeneric = (genericTasksList || []).filter((item) => {
     if (item.taskType !== currentTask) return false;
-    const matchStaff = !selectedStaffId || item.canBoId === selectedStaffId;
+    const matchStaff = !effectiveStaffId || item.canBoId === effectiveStaffId;
     const matchTo = checkToDanPhoMatch(item.toDanPho);
     const matchSearch =
       !searchTerm ||
@@ -286,7 +288,7 @@ export const TaskUpdateView: React.FC<TaskUpdateViewProps> = ({
               </div>
               <div className="text-[11px] text-slate-500">
                 {selectedStaffId
-                  ? 'Đang lọc xem hồ sơ của cán bộ được chọn'
+                  ? (isAdmin ? 'Đang lọc xem hồ sơ của cán bộ được chọn' : 'Đang hiển thị nhiệm vụ được giao cho tài khoản này')
                   : 'Đang hiển thị toàn bộ hồ sơ trong đơn vị'}
               </div>
             </div>
@@ -302,7 +304,7 @@ export const TaskUpdateView: React.FC<TaskUpdateViewProps> = ({
                 Chỉ xem nhiệm vụ của tôi
               </button>
             )}
-            {selectedStaffId && (
+            {isAdmin && selectedStaffId && (
               <button
                 type="button"
                 onClick={() => onSelectStaff('')}
@@ -326,7 +328,7 @@ export const TaskUpdateView: React.FC<TaskUpdateViewProps> = ({
           </span>
 
           <div className="flex items-center gap-2">
-            {onOpenResidentialModal && (
+            {isAdmin && onOpenResidentialModal && (
               <button
                 type="button"
                 id="btn-open-residential-top"
@@ -340,7 +342,7 @@ export const TaskUpdateView: React.FC<TaskUpdateViewProps> = ({
               </button>
             )}
 
-            {onOpenExcelModal && (
+            {isAdmin && onOpenExcelModal && (
               <button
                 type="button"
                 id="btn-open-excel-task-top"
@@ -354,7 +356,7 @@ export const TaskUpdateView: React.FC<TaskUpdateViewProps> = ({
               </button>
             )}
 
-            {onOpenManageCategories && (
+            {isAdmin && onOpenManageCategories && (
               <button
                 type="button"
                 id="btn-manage-categories-top"
@@ -368,6 +370,7 @@ export const TaskUpdateView: React.FC<TaskUpdateViewProps> = ({
               </button>
             )}
 
+            {isAdmin && (
             <button
               type="button"
               id="btn-add-record-top"
@@ -377,6 +380,7 @@ export const TaskUpdateView: React.FC<TaskUpdateViewProps> = ({
               <Plus className="w-4 h-4" />
               <span>Thêm bản ghi mới</span>
             </button>
+            )}
           </div>
         </div>
 
@@ -434,12 +438,15 @@ export const TaskUpdateView: React.FC<TaskUpdateViewProps> = ({
               <User className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
               <select
                 id="select-officer"
-                value={selectedStaffId}
-                onChange={(e) => onSelectStaff(e.target.value)}
+                value={effectiveStaffId}
+                onChange={(e) => {
+                  if (isAdmin) onSelectStaff(e.target.value);
+                }}
+                disabled={!isAdmin}
                 className="w-full pl-9 pr-8 py-2 text-xs font-bold bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-red-600 focus:outline-hidden text-slate-800"
               >
-                <option value="">-- Tất cả cán bộ trong đơn vị ({staffList.length} đồng chí) --</option>
-                {staffList.map((s) => (
+                {isAdmin && <option value="">-- Tất cả cán bộ trong đơn vị ({staffList.length} đồng chí) --</option>}
+                {(isAdmin ? staffList : staffList.filter((s) => s.id === effectiveStaffId)).map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.name} ({s.rank || 'Cán bộ'}) {s.phone ? `- SĐT: ${s.phone}` : ''}
                   </option>
