@@ -194,6 +194,7 @@ export function App() {
 
   // --- STAFF MANAGEMENT HANDLERS ---
   const handleAddStaff = (newStaff: Staff) => {
+    if (currentUser?.role !== 'admin') { showToast('Tài khoản cán bộ không có quyền quản trị.'); return; }
     const updated = [...staffList, newStaff];
     setStaffList(updated);
     saveStaffList(updated);
@@ -202,6 +203,7 @@ export function App() {
   };
 
   const handleUpdateStaff = (updatedStaff: Staff) => {
+    if (currentUser?.role !== 'admin') { showToast('Tài khoản cán bộ không có quyền quản trị.'); return; }
     const updated = staffList.map((s) => (s.id === updatedStaff.id ? updatedStaff : s));
     setStaffList(updated);
     saveStaffList(updated);
@@ -238,6 +240,7 @@ export function App() {
   };
 
   const handleDeleteStaff = (staffId: string) => {
+    if (currentUser?.role !== 'admin') { showToast('Tài khoản cán bộ không có quyền quản trị.'); return; }
     const updated = staffList.filter((s) => s.id !== staffId);
     setStaffList(updated);
     saveStaffList(updated);
@@ -252,6 +255,7 @@ export function App() {
     toStaffId: string,
     taskType: 'all' | TaskType
   ) => {
+    if (currentUser?.role !== 'admin') { showToast('Tài khoản cán bộ không có quyền chuyển giao nhiệm vụ.'); return; }
     const targetStaff = staffList.find((s) => s.id === toStaffId);
     const toName = targetStaff ? `${targetStaff.rank} ${targetStaff.name}` : toStaffId;
     const timestamp = new Date().toISOString().replace('T', ' ').slice(0, 16);
@@ -392,6 +396,7 @@ export function App() {
 
   // In-app Delete a record (No window.confirm to avoid iframe issues)
   const handleDeleteRecord = (taskType: TaskType, stt: number, recordTitle?: string) => {
+    if (currentUser?.role !== 'admin') { showToast('Tài khoản cán bộ không có quyền xóa chỉ tiêu.'); return; }
     setRecordToDelete({
       taskType,
       stt,
@@ -446,6 +451,7 @@ export function App() {
 
   // Add a new task record
   const handleAddTask = (taskType: TaskType, recordData: any) => {
+    if (currentUser?.role !== 'admin') { showToast('Tài khoản cán bộ không có quyền giao/thêm chỉ tiêu.'); return; }
     const timestamp = new Date().toISOString().replace('T', ' ').slice(0, 16);
 
     if (taskType === 'hkcch') {
