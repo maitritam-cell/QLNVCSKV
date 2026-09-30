@@ -163,6 +163,9 @@ export function App() {
   const handleLoginSuccess = (user: UserAccount) => {
     setCurrentUserState(user);
     setIsLoginModalOpen(false);
+    if (user.role !== 'admin' && currentTab === 'staff') {
+      setCurrentTab('update');
+    }
     if (user.staffId) {
       setSelectedStaffId(user.staffId);
     } else {
@@ -682,7 +685,7 @@ export function App() {
           />
         )}
 
-        {currentTab === 'staff' && (
+        {currentTab === 'staff' && currentUser.role === 'admin' && (
           <StaffManagementView
             staffList={staffList}
             hkcchList={hkcchList}
