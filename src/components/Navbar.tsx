@@ -119,7 +119,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             <span>Báo Cáo</span>
           </button>
 
-          {/* Staff Management & Task Assignment Tab (Chỉ huy / Toàn quyền or Officer viewing) */}
+          {/* Staff Management & Task Assignment Tab - chỉ Ban Chỉ huy */}
+          {currentUser?.role === 'admin' && (
           <button
             type="button"
             id="tab-staff-management"
@@ -133,6 +134,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <Users className="w-3.5 h-3.5" />
             <span>Cán Bộ & Giao Việc</span>
           </button>
+          )}
 
           <div className="h-4 w-px bg-white/20 hidden sm:block mx-0.5" />
 
@@ -173,6 +175,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-amber-300' : ''}`} />
           </button>
 
+          {currentUser?.role === 'admin' && (
           {/* Data Backup / Restore Modal Button */}
           <button
             type="button"
@@ -184,9 +187,10 @@ export const Navbar: React.FC<NavbarProps> = ({
             <Database className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Dữ liệu</span>
           </button>
+          )}
 
           {/* Residential Groups Management Button */}
-          {onOpenResidentialModal && (
+          {currentUser?.role === 'admin' && onOpenResidentialModal && (
             <button
               type="button"
               id="btn-open-residential-nav"
