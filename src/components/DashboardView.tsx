@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { TaskType, Staff, StaffTaskStats, AllDashboardStats } from '../types';
-import { TASK_CONFIG } from '../data/storage';
+import { TASK_CONFIG, getTaskCategories } from '../data/storage';
 import {
   Award,
   RefreshCw,
