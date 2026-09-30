@@ -98,7 +98,7 @@ export const TaskUpdateView: React.FC<TaskUpdateViewProps> = ({
 
   const taskCategories = getTaskCategories();
   const isAdmin = currentUser?.role === 'admin';
-  const effectiveStaffId = isAdmin ? selectedStaffId : (currentUser?.staffId || '');
+  const effectiveStaffId = isAdmin ? selectedStaffId : (currentUser?.staffId || '__NO_STAFF__');
   const taskConfig = TASK_CONFIG[currentTask];
   const residentialGroups = getResidentialGroups();
 
