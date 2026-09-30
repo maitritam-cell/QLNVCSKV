@@ -175,8 +175,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-amber-300' : ''}`} />
           </button>
 
-          {currentUser?.role === 'admin' && (
           {/* Data Backup / Restore Modal Button */}
+          {currentUser?.role === 'admin' && (
           <button
             type="button"
             id="btn-open-data-modal"
