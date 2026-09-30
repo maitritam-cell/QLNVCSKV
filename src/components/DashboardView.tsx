@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { TaskType, Staff, StaffTaskStats, AllDashboardStats } from '../types';
 import { TASK_CONFIG } from '../data/storage';
 import {
@@ -29,15 +29,32 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onSelectTaskAndStaff,
   isRefreshing
 }) => {
-  const [selectedTaskTab, setSelectedTaskTab] = useState<TaskType>('hkcch');
+  const taskCategories = getTaskCategories();
+  const activeTaskKeys = taskCategories.map((cat) => cat.id);
+  const [selectedTaskTab, setSelectedTaskTab] = useState<TaskType>(() => taskCategories[0]?.id || 'hkcch');
 
-  // Overall totals across all 4 tasks
-  const overallTotal =
-    statsAll.hkcch.total + statsAll.matuy.total + statsAll.dcttp.total + statsAll.datdai.total;
-  const overallDone =
-    statsAll.hkcch.done + statsAll.matuy.done + statsAll.dcttp.done + statsAll.datdai.done;
-  const overallRemain =
-    statsAll.hkcch.remain + statsAll.matuy.remain + statsAll.dcttp.remain + statsAll.datdai.remain;
+  useEffect(() => {
+    if (activeTaskKeys.length === 0) return;
+    if (!activeTaskKeys.includes(selectedTaskTab)) {
+      setSelectedTaskTab(activeTaskKeys[0]);
+    }
+  }, [activeTaskKeys.join('|'), selectedTaskTab]);
+
+  // Overall totals only for currently active task categories.
+  const overall = activeTaskKeys.reduce(
+    (sum, key) => {
+      const st = statsAll[key] || { total: 0, done: 0, remain: 0, percent: 0 };
+      return {
+        total: sum.total + st.total,
+        done: sum.done + st.done,
+        remain: sum.remain + st.remain
+      };
+    },
+    { total: 0, done: 0, remain: 0 }
+  );
+  const overallTotal = overall.total;
+  const overallDone = overall.done;
+  const overallRemain = overall.remain;
   const overallPercent =
     overallTotal > 0 ? Math.round((overallDone / overallTotal) * 100) : 0;
 
@@ -54,6 +71,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       case 'dcttp':
         return <MapPin className="w-5 h-5" />;
       case 'datdai':
+        return <FileCheck className="w-5 h-5" />;
+      default:
         return <FileCheck className="w-5 h-5" />;
     }
   };
@@ -146,7 +165,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
       {/* 2. FOUR TASKS BREAKDOWN CARDS */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {(['hkcch', 'matuy', 'dcttp', 'datdai'] as TaskType[]).map((taskKey) => {
+        {activeTaskKeys.map((taskKey) => {
           const cfg = TASK_CONFIG[taskKey];
           const st = statsAll[taskKey];
           const isSelected = selectedTaskTab === taskKey;
@@ -228,7 +247,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
           {/* Quick tab switch */}
           <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl w-full sm:w-auto overflow-x-auto">
-            {(['hkcch', 'matuy', 'dcttp', 'datdai'] as TaskType[]).map((tKey) => (
+            {activeTaskKeys.map((tKey) => (
               <button
                 key={tKey}
                 type="button"
